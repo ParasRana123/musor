@@ -23,20 +23,20 @@ app.get("/me", requireAuth(), async (req, res) => {
   res.json(user);
 }); 
 
-import sync from './routes/auth.clerk.js' 
+import sync from '../routes/auth.clerk.js' 
 app.use('/api/sync',sync) 
  
-import getall from './routes/getall.js'
+import getall from '../routes/getall.js'
 app.use('/getall',getall) 
 
 
 const PORT=process.env.PORT || 5000 
 
-import deleteall from './routes/deleteall.js'
+import deleteall from '../routes/deleteall.js'
 app.use('/deleteall',deleteall) 
 
 
-import store from './routes/store.js'
+import store from '../routes/store.js'
 app.use('/music',store)
 
 // app.get('/', (req, res) => {

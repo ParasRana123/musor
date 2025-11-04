@@ -1,17 +1,38 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import axios from "axios";
 import { Search, Music, Play, Loader2, Youtube, Heart } from "lucide-react";
 import { useAuth } from "@clerk/clerk-react";
+
 const MusicPlayer = () => {
+  // State declarations - all at the top
   const [link, setLink] = useState("");
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
-  const [isFav, setisfav] = useState(false);
+  const [isFav, setIsFav] = useState(false);
+  
+  // Constants
   const musicapi = import.meta.env.VITE_MUSIC_API;
   const { getToken } = useAuth();
   const backendapi = import.meta.env.VITE_BACKEND_URL;
-  const fetchsongid = (input) => {
+
+  // Helper function to extract YouTube video ID from URL
+  const extractVideoId = (url) => {
+    if (!url) return null;
+    // Handle various YouTube URL formats
+    const patterns = [
+      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
+      /youtube\.com\/watch\?.*v=([^&\n?#]+)/,
+    ];
+    for (const pattern of patterns) {
+      const match = url.match(pattern);
+      if (match && match[1]) return match[1];
+    }
+    return null;
+  };
+
+  // Memoized fetch function
+  const fetchsongid = useCallback((input) => {
     if (!input.trim()) {
       setLink("");
       setError("");
@@ -24,29 +45,71 @@ const MusicPlayer = () => {
     axios
       .post(`${musicapi}/get-music-link`, { song: input })
       .then((response) => {
-        setLink(
-          "https://www.youtube.com/embed/" +
-            response.data.Link.split("v=").pop()
-        );
-        setIsLoading(false);
-        setisfav(false);
-        setliked(false);
+        const videoId = extractVideoId(response.data.Link);
+        if (videoId) {
+          setLink(`https://www.youtube.com/embed/${videoId}`);
+          setIsLoading(false);
+          setIsFav(false);
+        } else {
+          setError("Invalid YouTube link received. Try a different search.");
+          setIsLoading(false);
+          setLink("");
+        }
       })
       .catch((error) => {
-        console.log(error);
+        console.error("Error fetching song:", error);
         setError("Could not find the song. Try a different search.");
         setIsLoading(false);
         setLink("");
       });
-  };
+  }, [musicapi]);
+
+  // Memoized check if liked function
+  const checkifliked = useCallback(async () => {
+    if (!link) {
+      return;
+    }
+    
+    try {
+      const token = await getToken();
+      const check = await axios.get(
+        `${backendapi}/music/checkifliked?link=${link}`,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      
+      // Set state based on backend response
+      setIsFav(check.data.liked);
+    } catch (error) {
+      console.error("Error checking if liked:", error);
+      setIsFav(false);
+    }
+  }, [link, backendapi, getToken]);
+
+  // Handle favorite toggle
   const handleFav = async () => {
+    // Validate that we have a link before attempting to favorite
+    if (!link) {
+      console.error("Cannot favorite: No link available");
+      setError("Please search for a song first before adding to favorites.");
+      return;
+    }
+
     const newFav = !isFav;
-    setisfav(newFav);
-    setliked(newFav);
+    setIsFav(newFav); // Optimistic update
 
     try {
-      // Get token inside the async function
       const token = await getToken();
+      
+      if (!token) {
+        throw new Error("Authentication token not available");
+      }
+
+      console.log("Sending favorite request:", { link, fav: newFav });
       
       const response = await axios.post(
         `${backendapi}/music`,
@@ -65,40 +128,33 @@ const MusicPlayer = () => {
       console.log("✅ Response:", response.data);
     } catch (error) {
       console.error("❌ Error updating favorite:", error);
-      // Revert both states on error
-      setisfav(!newFav);
-      setliked(!newFav);
-    }
-  }; 
-
-  const [liked, setliked] = useState(false);
-  
-  const checkifliked = async () => {
-    if (!link) {
-      return;
-    }
-    
-    try {
-      const token = await getToken();
-      const check = await axios.get(
-        `${backendapi}/music/checkifliked?link=${link}`,
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
       
-      // Set both states based on backend response
-      setliked(check.data.liked);
-      setisfav(check.data.liked);
-    } catch (error) {
-      console.error("Error checking if liked:", error);
-      setliked(false);
-      setisfav(false);
+      // Show detailed error message
+      if (error.response) {
+        // Server responded with error status
+        const errorMessage = error.response.data?.error || error.response.statusText;
+        console.error("Server error:", errorMessage, error.response.status);
+        if (error.response.status === 400) {
+          setError("Invalid request. Please try refreshing the page.");
+        } else if (error.response.status === 404) {
+          setError("User not found. Please log in again.");
+        }
+      } else if (error.request) {
+        // Request was made but no response received
+        console.error("No response received:", error.request);
+        setError("Network error. Please check your connection.");
+      } else {
+        // Something else happened
+        console.error("Error:", error.message);
+        setError("An error occurred. Please try again.");
+      }
+      
+      // Revert state on error
+      setIsFav(!newFav);
     }
   };
+
+  // Debounced search effect
   useEffect(() => {
     const handler = setTimeout(() => {
       if (input) {
@@ -107,11 +163,12 @@ const MusicPlayer = () => {
       }
     }, 500);
     return () => clearTimeout(handler);
-  }, [input]);
+  }, [input, fetchsongid]);
 
+  // Check if liked when link changes
   useEffect(() => {
     checkifliked();
-  }, [link]);
+  }, [checkifliked]);
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-800 py-12 px-4 sm:px-6 lg:px-8">
       {/* Animated Background */}
@@ -231,11 +288,11 @@ const MusicPlayer = () => {
                   <button
                     onClick={handleFav}
                     className="group relative p-3 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all duration-300 hover:scale-110 active:scale-95"
-                    aria-label={isFav || liked ? "Remove from favorites" : "Add to favorites"}
+                    aria-label={isFav ? "Remove from favorites" : "Add to favorites"}
                   >
                     <Heart
                       className={`w-6 h-6 transition-all duration-300 ${
-                        isFav || liked
+                        isFav
                           ? "text-red-500 fill-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.5)]"
                           : "text-gray-400 group-hover:text-white"
                       }`}
@@ -243,7 +300,7 @@ const MusicPlayer = () => {
                     
                     {/* Tooltip */}
                     <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1 bg-black/90 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none">
-                      {isFav || liked ? "Remove from favorites" : "Add to favorites"}
+                      {isFav ? "Remove from favorites" : "Add to favorites"}
                     </span>
                   </button>
                 </div>

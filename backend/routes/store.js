@@ -13,9 +13,18 @@ router.post("/", requireAuth(), async (req, res) => {
       return res.status(404).json({ error: "User not found" });
     } 
     // check if user  has vieewd this music  
-    console.log(req.body.link,req.body.fav,user.rows[0].clerk_user_id) 
-    if (!req.body.link || !req.body.fav || !user.rows[0].clerk_user_id) {
-      return res.status(400).json({ error: "Invalid request" });
+    console.log(req.body.link, req.body.fav, user.rows[0].clerk_user_id) 
+    
+    // Validate request - fav must be explicitly boolean (true or false), not undefined/null
+    if (!req.body.link || typeof req.body.fav !== 'boolean' || !user.rows[0].clerk_user_id) {
+      return res.status(400).json({ 
+        error: "Invalid request",
+        details: {
+          link: req.body.link ? "present" : "missing",
+          fav: typeof req.body.fav,
+          userId: user.rows[0].clerk_user_id ? "present" : "missing"
+        }
+      });
     }
     const exist = await pool.query(
       "SELECT * FROM music WHERE musicid = $1 AND clerk_user_id = $2",

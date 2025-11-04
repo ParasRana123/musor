@@ -27,8 +27,8 @@ async function getTopYTResults(songName) {
       videoId: item.id.videoId,
       title: item.snippet.title,
       thumbnail: item.snippet.thumbnails?.high?.url || item.snippet.thumbnails?.default?.url,
-      videoLink: https://www.youtube.com/watch?v=${item.id.videoId},
-      embedLink: https://www.youtube.com/embed/${item.id.videoId},
+      videoLink: `https://www.youtube.com/watch?v=${item.id.videoId}`,
+      embedLink: `https://www.youtube.com/embed/${item.id.videoId}`,
     }));
 
     return topVideos;

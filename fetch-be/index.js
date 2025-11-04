@@ -1,11 +1,13 @@
 import express from "express";
 import axios from "axios";
-
+import cors from 'cors'
 const app = express();
 app.use(express.json());
+app.use(cors());
 
 async function getYTMusicLink(songName) {
-  try {
+  try { 
+    console.log("Fetching link for: ", songName);
     const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(songName)}`;
     const { data } = await axios.get(searchUrl, {
       headers: {

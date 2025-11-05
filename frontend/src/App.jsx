@@ -16,6 +16,8 @@ import Music from "./pages/music";
 import AddFriend from "./pages/addfriend";
 import Playlist from "./pages/playlist";
 import Notifications from "./pages/notifications";
+import Friends from "./pages/friends";
+import JoinRoom from "./pages/joinroom";
 export default function App() {
   return (
     <Router>
@@ -56,8 +58,10 @@ export default function App() {
             <Route path="/profile" element={<Profile />} />  
             <Route path="/music" element={<Music />} /> 
             <Route path="/addfriend" element={<AddFriend />} />
+            <Route path="/friends" element={<Friends />} />
             <Route path="/playlist" element={<Playlist />} />
             <Route path="/notifications" element={<Notifications />} />
+            <Route path="/joinroom" element={<JoinRoom />} />
             <Route path="*" element={<NoMatch text="Oops" />} />
           </Routes>
         </SignedIn>

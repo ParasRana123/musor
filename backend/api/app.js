@@ -12,7 +12,12 @@ app.use(cors(
         origin: ["http://localhost:5173", "http://localhost:8080","http://192.168.137.157:5173","https://musor-ten.vercel.app"],
         credentials: true,
     }
-))
+)) 
+app.options('*', cors({
+  origin: ["http://localhost:5173", "https://musor-ten.vercel.app"],
+  credentials: true
+}));
+
 app.get("/protected", requireAuth(), (req, res) => {
   res.json({ message: "Hello, " + req.auth.userId });
 });

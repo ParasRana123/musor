@@ -44,6 +44,12 @@ app.use('/music',store)
 import playlist from '../routes/playlist.js'
 app.use('/playlist',playlist)
 
+import friends from '../routes/friends.js'
+app.use('/friends',friends)
+
+import notifications from '../routes/notifications.js'
+app.use('/notifications',notifications)
+
 
 // app.get('/', (req, res) => {
 //   res.json({ status: 'OK', message: 'API running' });

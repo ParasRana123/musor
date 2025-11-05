@@ -1,8 +1,37 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useUser, useAuth } from "@clerk/clerk-react";
 
 const FuturisticMusicApp = () => {
   const [isVisible, setIsVisible] = useState({});
   const observerRef = useRef(null);
+  const { user } = useUser();
+  const { getToken } = useAuth();
+  const backendurl = import.meta.env.VITE_BACKEND_URL; 
+  console.log(user)
+  useEffect(() => {
+    const syncUser = async () => {
+      if (user) {
+        const token = await getToken();
+        const res = await fetch(`${backendurl}/api/sync`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`, // ✅ Send Clerk auth token
+          },
+          body: JSON.stringify({
+            id: user.id,
+            email: user.primaryEmailAddress?.emailAddress,
+            username: user.username || user.firstName || "Unknown user",
+          }),
+        });
+
+        const data = await res.json();
+        console.log(data);
+      }
+    };
+
+    syncUser();
+  }, [user]);
 
   useEffect(() => {
     observerRef.current = new IntersectionObserver(

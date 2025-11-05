@@ -15,6 +15,7 @@ import NoMatch from "../components/TextPressure";
 import Music from "./pages/music";
 import AddFriend from "./pages/addfriend";
 import Playlist from "./pages/playlist";
+import Notifications from "./pages/notifications";
 export default function App() {
   return (
     <Router>
@@ -33,15 +34,17 @@ export default function App() {
               { label: "Friends", href: "/friends" }, 
               { label: "Add", href: "/addfriend" }, 
               {label : "Playlist" , href: "/playlist" },
+              {label : "Notif" , href: "/notifications" },
+              {label : "Room" , href: "/joinroom" },
             ]}
-            socialItems={[
-              { label: "Github", href: "https://github.com/AdityaKurani" },
-              {
-                label: "LinkedIn",
-                href: "https://linkedin.com/in/aditya-kurani",
-              },
-              { label: "Twitter", href: "https://twitter.com/AdityaKurani" },
-            ]}
+            // socialItems={[
+            //   { label: "Github", href: "https://github.com/AdityaKurani" },
+            //   {
+            //     label: "LinkedIn",
+            //     href: "https://linkedin.com/in/aditya-kurani",
+            //   },
+            //   { label: "Twitter", href: "https://twitter.com/AdityaKurani" },
+            // ]}
             displayItemNumbering={true}
             className="fixed top-0 left-0 z-50 bg-black" 
             logoUrl={logo}
@@ -54,6 +57,7 @@ export default function App() {
             <Route path="/music" element={<Music />} /> 
             <Route path="/addfriend" element={<AddFriend />} />
             <Route path="/playlist" element={<Playlist />} />
+            <Route path="/notifications" element={<Notifications />} />
             <Route path="*" element={<NoMatch text="Oops" />} />
           </Routes>
         </SignedIn>

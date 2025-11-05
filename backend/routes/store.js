@@ -45,7 +45,16 @@ router.post("/", requireAuth(), async (req, res) => {
     res.json(result.rows[0]);
   } catch (error) {
     console.error("Error adding store:", error);
-    res.status(500).json({ error: "Internal server error" });
+    
+    // Handle database connection errors specifically
+    if (error.code === 'ECONNREFUSED' || error.code === 'ETIMEDOUT' || error.message?.includes('Connection terminated')) {
+      res.status(503).json({ 
+        error: "Database connection error. Please try again.",
+        retry: true 
+      });
+    } else {
+      res.status(500).json({ error: "Internal server error" });
+    }
   }
 }); 
 
@@ -68,7 +77,17 @@ router.get("/checkifliked", requireAuth(), async (req, res) => {
     return res.status(200).json({ liked: false });
   } catch (error) {
     console.error("Error checking if liked:", error);
-    res.status(500).json({ error: "Internal server error" });
+    
+    // Handle database connection errors specifically
+    if (error.code === 'ECONNREFUSED' || error.code === 'ETIMEDOUT' || error.message?.includes('Connection terminated')) {
+      res.status(503).json({ 
+        error: "Database connection error. Please try again.",
+        retry: true,
+        liked: false // Default to false on connection error
+      });
+    } else {
+      res.status(500).json({ error: "Internal server error" });
+    }
   }
 })
 export default router;

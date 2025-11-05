@@ -4,9 +4,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 dotenv.config();
 
-const app = express();
-app.use(express.json());
-app.use(cors());
+const router = express.Router();
 
 const YT_API_KEY = process.env.YT_API_KEY;
 
@@ -38,11 +36,11 @@ async function getTopYTResults(songName) {
   }
 }
 
-app.get("/", (req, res) => {
+router.get("/", (req, res) => {
   res.json({ message: "Hello from YouTube Data API Server" });
 });
 
-app.post("/get-music-link", async (req, res) => {
+router.post("/get-music-link", async (req, res) => {
   const { song } = req.body;
   if (!song) {
     return res.status(400).json({ error: "Please provide a song name" });
@@ -56,7 +54,4 @@ app.post("/get-music-link", async (req, res) => {
     res.status(404).json({ error: "No YouTube links found" });
   }
 });
-
-app.listen(3001, () => {
-  console.log("Server running on port 3001");
-});
+export default router;

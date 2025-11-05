@@ -35,9 +35,15 @@ const PORT=process.env.PORT || 5000
 import deleteall from '../routes/deleteall.js'
 app.use('/deleteall',deleteall) 
 
+import getsongs from '../routes/getsongs.js'
+app.use('/getsongs',getsongs)
 
 import store from '../routes/store.js'
 app.use('/music',store)
+
+import playlist from '../routes/playlist.js'
+app.use('/playlist',playlist)
+
 
 // app.get('/', (req, res) => {
 //   res.json({ status: 'OK', message: 'API running' });

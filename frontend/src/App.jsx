@@ -13,6 +13,8 @@ import Landing from "./pages/landing";
 import logo from "/public/image.png";
 import NoMatch from "../components/TextPressure";
 import Music from "./pages/music";
+import AddFriend from "./pages/addfriend";
+import Playlist from "./pages/playlist";
 export default function App() {
   return (
     <Router>
@@ -28,7 +30,9 @@ export default function App() {
               { label: "Home", href: "/" },
               { label: "Profile", href: "/profile" },
               { label: "Music", href: "/music" },
-              { label: "Friends", href: "/friends" },
+              { label: "Friends", href: "/friends" }, 
+              { label: "Add", href: "/addfriend" }, 
+              {label : "Playlist" , href: "/playlist" },
             ]}
             socialItems={[
               { label: "Github", href: "https://github.com/AdityaKurani" },
@@ -47,7 +51,9 @@ export default function App() {
             <Route path="/" element={<Landing />} />
             <Route path="/sync" element={<SyncUser />} />
             <Route path="/profile" element={<Profile />} />  
-            <Route path="/music" element={<Music />} />
+            <Route path="/music" element={<Music />} /> 
+            <Route path="/addfriend" element={<AddFriend />} />
+            <Route path="/playlist" element={<Playlist />} />
             <Route path="*" element={<NoMatch text="Oops" />} />
           </Routes>
         </SignedIn>

@@ -1,84 +1,911 @@
 <!DOCTYPE html>
-<<<<<<< HEAD
-<html>
-  <body>
-    <!-- 1. The <iframe> (and video player) will replace this <div> tag. -->
-    <div id="player"></div>
-
-    <script>
-      // 2. This code loads the IFrame Player API code asynchronously.
-      var tag = document.createElement('script');
-
-      tag.src = "https://www.youtube.com/iframe_api";
-      var firstScriptTag = document.getElementsByTagName('script')[0];
-      firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
-
-      // 3. This function creates an <iframe> (and YouTube player)
-      //    after the API code downloads.
-      var player;
-      function onYouTubeIframeAPIReady() {
-        player = new YT.Player('player', {
-          height: '390',
-          width: '640',
-          videoId: 'JGwWNGJdvx8',  // Alan Walker - Faded
-
-          playerVars: {
-            'playsinline': 1
-          },
-          events: {
-            'onReady': onPlayerReady,
-            'onStateChange': onPlayerStateChange
-          }
-        });
-      }
-
-      // 4. The API will call this function when the video player is ready.
-      function onPlayerReady(event) {
-        event.target.playVideo();
-      }
-
-      // 5. The API calls this function when the player's state changes.
-      //    The function indicates that when playing a video (state=1),
-      //    the player should play for six seconds and then stop.
-      var done = false;
-      function onPlayerStateChange(event) {
-        if (event.data == YT.PlayerState.PLAYING && !done) {
-          setTimeout(stopVideo, 6000);
-          done = true;
-        }
-      }
-      function stopVideo() {
-        player.stopVideo();
-      }
-    </script>
-  </body>
-=======
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Play YouTube Video</title>
-  <style>
-    body {
-      background-color: #111;
-      color: #fff;
-      text-align: center;
-      font-family: Arial, sans-serif;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Music Player</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-    iframe {
-      width: 80%;
-      height: 450px;
-      border: none;
-      border-radius: 12px;
-      box-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
-      margin-top: 50px;
-    }
-  </style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+            background: linear-gradient(to bottom right, #1a1a2e, #000000, #16213e);
+            min-height: 100vh;
+            color: #fff;
+            padding: 3rem 1rem;
+        }
+
+        /* Animated Background */
+        .animated-bg {
+            position: fixed;
+            inset: 0;
+            opacity: 0.2;
+            pointer-events: none;
+            overflow: hidden;
+        }
+
+        .floating-dot {
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+            animation: float 15s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% {
+                transform: translateY(0px);
+            }
+            50% {
+                transform: translateY(-20px);
+            }
+        }
+
+        /* Container */
+        .container {
+            max-width: 1152px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 10;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .header-title-wrapper {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .music-icon {
+            width: 2rem;
+            height: 2rem;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        .header-title {
+            font-size: clamp(3rem, 8vw, 3.75rem);
+            font-weight: bold;
+            background: linear-gradient(to right, #ffffff, #d1d5db, #ffffff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header-subtitle {
+            color: #9ca3af;
+            font-size: 1.125rem;
+        }
+
+        /* Search Section */
+        .search-section {
+            margin-bottom: 3rem;
+        }
+
+        .search-wrapper {
+            max-width: 42rem;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .search-glow {
+            position: absolute;
+            inset: 0;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 9999px;
+            filter: blur(40px);
+            transition: all 0.3s;
+        }
+
+        .search-container:hover .search-glow {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .search-container {
+            position: relative;
+            background: linear-gradient(to bottom right, #1a1a2e, #000000);
+            border: 1px solid #374151;
+            border-radius: 9999px;
+            overflow: hidden;
+            transition: all 0.3s;
+        }
+
+        .search-container:hover {
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+
+        .search-inner {
+            display: flex;
+            align-items: center;
+        }
+
+        .search-icon-wrapper {
+            padding: 0 1rem 0 1.5rem;
+        }
+
+        .search-icon {
+            width: 1.5rem;
+            height: 1.5rem;
+            color: #9ca3af;
+            transition: color 0.3s;
+        }
+
+        .search-container:hover .search-icon {
+            color: #fff;
+        }
+
+        .search-input {
+            flex: 1;
+            background: transparent;
+            color: white;
+            padding: 0.75rem 1.5rem 0.75rem 0;
+            outline: none;
+            border: none;
+            font-size: 1.125rem;
+        }
+
+        .search-input::placeholder {
+            color: #6b7280;
+        }
+
+        .loader-wrapper {
+            padding-right: 1.5rem;
+        }
+
+        .loader {
+            width: 1.5rem;
+            height: 1.5rem;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Messages */
+        .message {
+            max-width: 42rem;
+            margin: 1rem auto 0;
+            padding: 1rem 1.5rem;
+            border-radius: 1rem;
+            text-align: center;
+        }
+
+        .error-message {
+            background: rgba(127, 29, 29, 0.2);
+            border: 1px solid #991b1b;
+            color: #f87171;
+        }
+
+        .success-message {
+            background: rgba(20, 83, 45, 0.2);
+            border: 1px solid #166534;
+            color: #4ade80;
+        }
+
+        /* Main Content Layout */
+        .main-content {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .content-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        @media (min-width: 1024px) {
+            .content-grid {
+                flex-direction: row;
+            }
+        }
+
+        /* Search Results */
+        .results-container {
+            flex-shrink: 0;
+        }
+
+        @media (min-width: 1024px) {
+            .results-container {
+                width: 33.333333%;
+            }
+        }
+
+        .results-title {
+            font-size: 1.25rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+            padding: 0 0.5rem;
+        }
+
+        .results-list {
+            max-height: calc(100vh - 100px);
+            overflow-y: auto;
+            padding-right: 0.5rem;
+            border: 1px solid #dc2626;
+        }
+
+        /* Custom Scrollbar */
+        .results-list::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .results-list::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+        }
+
+        .results-list::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+        }
+
+        .results-list::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .video-item {
+            margin-bottom: 0.5rem;
+            cursor: pointer;
+            background: linear-gradient(to bottom right, rgba(26, 26, 46, 0.5), rgba(0, 0, 0, 0.5));
+            border: 1px solid #1f2937;
+            border-radius: 0.75rem;
+            overflow: hidden;
+            transition: all 0.3s;
+        }
+
+        .video-item:hover {
+            border-color: rgba(255, 255, 255, 0.5);
+            transform: scale(1.02);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+        }
+
+        .video-item-inner {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .thumbnail-wrapper {
+            position: relative;
+            width: 96px;
+            height: 80px;
+            flex-shrink: 0;
+            background: #1a1a2e;
+        }
+
+        .thumbnail {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .play-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+
+        .video-item:hover .play-overlay {
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        .play-circle {
+            width: 2rem;
+            height: 2rem;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .video-item:hover .play-circle {
+            opacity: 1;
+        }
+
+        .video-number {
+            position: absolute;
+            top: 0.25rem;
+            left: 0.25rem;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            font-size: 0.75rem;
+            padding: 0.125rem 0.25rem;
+            border-radius: 0.25rem;
+        }
+
+        .video-title {
+            padding: 0.5rem;
+            flex: 1;
+            display: flex;
+            align-items: center;
+        }
+
+        .video-title-text {
+            color: white;
+            font-size: 0.75rem;
+            font-weight: 500;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            transition: color 0.3s;
+        }
+
+        .video-item:hover .video-title-text {
+            color: #e5e7eb;
+        }
+
+        /* Player Container */
+        .player-container {
+            flex-shrink: 0;
+        }
+
+        .player-container.full-width {
+            width: 100%;
+        }
+
+        @media (min-width: 1024px) {
+            .player-container:not(.full-width) {
+                width: 66.666667%;
+            }
+        }
+
+        .player-card {
+            background: linear-gradient(to bottom right, #1a1a2e, #000000);
+            border: 1px solid #1f2937;
+            border-radius: 1.5rem;
+            overflow: hidden;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            position: sticky;
+            top: 1rem;
+        }
+
+        .player-header {
+            background: linear-gradient(to right, #1f2937, #374151, #1f2937);
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid #374151;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .player-info {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .play-icon-wrapper {
+            width: 2.5rem;
+            height: 2.5rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .now-playing {
+            font-weight: 600;
+            color: white;
+        }
+
+        .song-name {
+            color: #9ca3af;
+            font-size: 0.875rem;
+        }
+
+        .youtube-icon {
+            color: #ef4444;
+            width: 1.5rem;
+            height: 1.5rem;
+        }
+
+        .video-wrapper {
+            position: relative;
+            aspect-ratio: 16 / 9;
+            background: black;
+        }
+
+        .video-iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        .player-footer {
+            background: linear-gradient(to right, #1a1a2e, #000000, #1a1a2e);
+            padding: 1rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #6b7280;
+            font-size: 0.875rem;
+        }
+
+        .status-dot {
+            width: 0.5rem;
+            height: 0.5rem;
+            background: #22c55e;
+            border-radius: 50%;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        .favorite-button {
+            position: relative;
+            padding: 0.75rem;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .favorite-button:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.2);
+            transform: scale(1.1);
+        }
+
+        .favorite-button:active {
+            transform: scale(0.95);
+        }
+
+        .heart-icon {
+            width: 1.5rem;
+            height: 1.5rem;
+            color: #9ca3af;
+            transition: all 0.3s;
+        }
+
+        .favorite-button:hover .heart-icon {
+            color: white;
+        }
+
+        .heart-icon.favorited {
+            color: #ef4444;
+            fill: #ef4444;
+            filter: drop-shadow(0 0 8px rgba(239, 68, 68, 0.5));
+        }
+
+        .tooltip {
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            margin-bottom: 0.5rem;
+            padding: 0.25rem 0.75rem;
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            font-size: 0.75rem;
+            border-radius: 0.5rem;
+            white-space: nowrap;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .favorite-button:hover .tooltip {
+            opacity: 1;
+        }
+
+        /* Empty State */
+        .empty-state {
+            max-width: 42rem;
+            margin: 0 auto;
+        }
+
+        .empty-card {
+            background: linear-gradient(to bottom right, rgba(26, 26, 46, 0.5), rgba(0, 0, 0, 0.5));
+            border: 1px solid #1f2937;
+            border-radius: 1.5rem;
+            padding: 3rem;
+            text-align: center;
+        }
+
+        .empty-icon-wrapper {
+            width: 5rem;
+            height: 5rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.5rem;
+        }
+
+        .empty-icon {
+            width: 2.5rem;
+            height: 2.5rem;
+            color: #4b5563;
+        }
+
+        .empty-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: white;
+            margin-bottom: 0.75rem;
+        }
+
+        .empty-description {
+            color: #9ca3af;
+            line-height: 1.625;
+        }
+
+        /* Hidden class */
+        .hidden {
+            display: none;
+        }
+    </style>
 </head>
 <body>
-  <h1>Now Playing: Shape of You</h1>
-  <iframe width="560" height="315" src="https://www.youtube.com/embed/GEL_GV_d85U" frameborder="0" allowfullscreen></iframe>
+    <!-- Animated Background -->
+    <div class="animated-bg" id="animatedBg"></div>
+
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-title-wrapper">
+                <svg class="music-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>
+                </svg>
+                <h1 class="header-title">Music Player</h1>
+            </div>
+            <p class="header-subtitle">Search and play your favorite songs</p>
+        </div>
+
+        <!-- Search Section -->
+        <div class="search-section">
+            <div class="search-wrapper">
+                <div class="search-glow"></div>
+                <div class="search-container">
+                    <div class="search-inner">
+                        <div class="search-icon-wrapper">
+                            <svg class="search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                            </svg>
+                        </div>
+                        <input 
+                            type="text" 
+                            class="search-input" 
+                            placeholder="Search for a song or artist..."
+                            id="searchInput"
+                        />
+                        <div class="loader-wrapper hidden" id="loaderWrapper">
+                            <div class="loader"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="message error-message hidden" id="errorMessage"></div>
+            <div class="message success-message hidden" id="successMessage"></div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="content-grid hidden" id="mainContent">
+                <!-- Search Results -->
+                <div class="results-container hidden" id="resultsContainer">
+                    <h2 class="results-title">Results (<span id="resultCount">0</span>)</h2>
+                    <div class="results-list" id="resultsList"></div>
+                </div>
+
+                <!-- Video Player -->
+                <div class="player-container hidden" id="playerContainer">
+                    <div class="player-card">
+                        <div class="player-header">
+                            <div class="player-info">
+                                <div class="play-icon-wrapper">
+                                    <svg fill="currentColor" viewBox="0 0 24 24" style="width: 1.25rem; height: 1.25rem; color: white;">
+                                        <path d="M8 5v14l11-7z"/>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <p class="now-playing">Now Playing</p>
+                                    <p class="song-name" id="songName">-</p>
+                                </div>
+                            </div>
+                            <svg class="youtube-icon" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                            </svg>
+                        </div>
+                        <div class="video-wrapper">
+                            <iframe 
+                                class="video-iframe" 
+                                id="videoIframe"
+                                title="YouTube video player"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                referrerpolicy="strict-origin-when-cross-origin"
+                                allowfullscreen
+                            ></iframe>
+                        </div>
+                        <div class="player-footer">
+                            <div class="status-indicator">
+                                <div class="status-dot"></div>
+                                <span>Playing from YouTube</span>
+                            </div>
+                            <button class="favorite-button" id="favoriteButton" aria-label="Add to favorites">
+                                <svg class="heart-icon" id="heartIcon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                                </svg>
+                                <span class="tooltip" id="tooltip">Add to favorites</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Empty State -->
+        <div class="empty-state" id="emptyState">
+            <div class="empty-card">
+                <div class="empty-icon-wrapper">
+                    <svg class="empty-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>
+                    </svg>
+                </div>
+                <h3 class="empty-title">Start Your Musical Journey</h3>
+                <p class="empty-description">
+                    Search for any song or artist above to start playing music. Your search will automatically find and play the video.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Create animated background dots
+        const animatedBg = document.getElementById('animatedBg');
+        for (let i = 0; i < 40; i++) {
+            const dot = document.createElement('div');
+            dot.className = 'floating-dot';
+            dot.style.width = (Math.random() * 3 + 1) + 'px';
+            dot.style.height = (Math.random() * 3 + 1) + 'px';
+            dot.style.left = Math.random() * 100 + '%';
+            dot.style.top = Math.random() * 100 + '%';
+            dot.style.animationDuration = (Math.random() * 10 + 10) + 's';
+            dot.style.animationDelay = Math.random() * 5 + 's';
+            animatedBg.appendChild(dot);
+        }
+
+        // State
+        let currentLink = '';
+        let isFavorite = false;
+        let searchResults = [];
+        let searchTimeout = null;
+
+        // Elements
+        const searchInput = document.getElementById('searchInput');
+        const loaderWrapper = document.getElementById('loaderWrapper');
+        const errorMessage = document.getElementById('errorMessage');
+        const successMessage = document.getElementById('successMessage');
+        const mainContent = document.getElementById('mainContent');
+        const emptyState = document.getElementById('emptyState');
+        const resultsContainer = document.getElementById('resultsContainer');
+        const playerContainer = document.getElementById('playerContainer');
+        const resultsList = document.getElementById('resultsList');
+        const resultCount = document.getElementById('resultCount');
+        const videoIframe = document.getElementById('videoIframe');
+        const songName = document.getElementById('songName');
+        const favoriteButton = document.getElementById('favoriteButton');
+        const heartIcon = document.getElementById('heartIcon');
+        const tooltip = document.getElementById('tooltip');
+
+        // Helper functions
+        function showMessage(element, text, duration = 3000) {
+            element.textContent = text;
+            element.classList.remove('hidden');
+            setTimeout(() => element.classList.add('hidden'), duration);
+        }
+
+        function hideMessage(element) {
+            element.classList.add('hidden');
+        }
+
+        function extractVideoId(url) {
+            if (!url) return null;
+            const patterns = [
+                /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
+                /youtube\.com\/watch\?.*v=([^&\n?#]+)/,
+            ];
+            for (const pattern of patterns) {
+                const match = url.match(pattern);
+                if (match && match[1]) return match[1];
+            }
+            return null;
+        }
+
+        function updateFavoriteUI() {
+            if (isFavorite) {
+                heartIcon.classList.add('favorited');
+                tooltip.textContent = 'Remove from favorites';
+            } else {
+                heartIcon.classList.remove('favorited');
+                tooltip.textContent = 'Add to favorites';
+            }
+        }
+
+        // Mock API calls (replace with your actual API endpoints)
+        async function searchMusic(query) {
+            // Simulate API call
+            return new Promise((resolve) => {
+                setTimeout(() => {
+                    // Mock data
+                    resolve({
+                        Link: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+                        results: [
+                            {
+                                videoId: 'dQw4w9WgXcQ',
+                                title: query + ' - Official Video',
+                                thumbnail: 'https://img.youtube.com/vi/dQw4w9WgXcQ/mqdefault.jpg',
+                                embedLink: 'https://www.youtube.com/embed/dQw4w9WgXcQ'
+                            },
+                            {
+                                videoId: 'example2',
+                                title: query + ' - Acoustic Version',
+                                thumbnail: 'https://img.youtube.com/vi/dQw4w9WgXcQ/mqdefault.jpg',
+                                embedLink: 'https://www.youtube.com/embed/example2'
+                            }
+                        ]
+                    });
+                }, 1000);
+            });
+        }
+
+        async function toggleFavorite(link, fav) {
+            // Simulate API call
+            return new Promise((resolve) => {
+                setTimeout(() => resolve({ success: true }), 500);
+            });
+        }
+
+        // Event handlers
+        searchInput.addEventListener('input', (e) => {
+            const value = e.target.value;
+            
+            clearTimeout(searchTimeout);
+            
+            if (!value.trim()) {
+                mainContent.classList.add('hidden');
+                emptyState.classList.remove('hidden');
+                loaderWrapper.classList.add('hidden');
+                return;
+            }
+
+            loaderWrapper.classList.remove('hidden');
+            
+            searchTimeout = setTimeout(async () => {
+                try {
+                    hideMessage(errorMessage);
+                    const data = await searchMusic(value);
+                    
+                    if (data.results && data.results.length > 0) {
+                        searchResults = data.results;
+                        renderSearchResults();
+                        
+                        const videoId = extractVideoId(data.Link);
+                        if (videoId) {
+                            currentLink = `https://www.youtube.com/embed/${videoId}`;
+                            videoIframe.src = currentLink;
+                            songName.textContent = value;
+                            isFavorite = false;
+                            updateFavoriteUI();
+                            
+                            emptyState.classList.add('hidden');
+                            mainContent.classList.remove('hidden');
+                            resultsContainer.classList.remove('hidden');
+                            playerContainer.classList.remove('hidden');
+                            playerContainer.classList.remove('full-width');
+                        }
+                    }
+                } catch (error) {
+                    showMessage(errorMessage, 'Could not find the song. Try a different search.');
+                } finally {
+                    loaderWrapper.classList.add('hidden');
+                }
+            }, 500);
+        });
+
+        function renderSearchResults() {
+            resultCount.textContent = searchResults.length;
+            resultsList.innerHTML = '';
+            
+            searchResults.forEach((video, index) => {
+                const item = document.createElement('div');
+                item.className = 'video-item';
+                item.innerHTML = `
+                    <div class="video-item-inner">
+                        <div class="thumbnail-wrapper">
+                            <img src="${video.thumbnail}" alt="${video.title}" class="thumbnail" loading="lazy">
+                            <div class="play-overlay">
+                                <div class="play-circle">
+                                    <svg fill="white" viewBox="0 0 24 24" style="width: 1rem; height: 1rem;">
+                                        <path d="M8 5v14l11-7z"/>
+                                    </svg>
+                                </div>
+                            </div>
+                            <div class="video-number">#${index + 1}</div>
+                        </div>
+                        <div class="video-title">
+                            <p class="video-title-text">${video.title}</p>
+                        </div>
+                    </div>
+                `;
+                
+                item.addEventListener('click', () => selectVideo(video));
+                resultsList.appendChild(item);
+            });
+        }
+
+        function selectVideo(video) {
+            currentLink = video.embedLink;
+            videoIframe.src = currentLink;
+            isFavorite = false;
+            updateFavoriteUI();
+        }
+
+        favoriteButton.addEventListener('click', async () => {
+            if (!currentLink) {
+                showMessage(errorMessage, 'Please search for a song first before adding to favorites.');
+                return;
+            }
+
+            const newFav = !isFavorite;
+            isFavorite = newFav;
+            updateFavoriteUI();
+
+            try {
+                await toggleFavorite(currentLink, newFav);
+                showMessage(successMessage, newFav ? 'Added to favorites!' : 'Removed from favorites!');
+            } catch (error) {
+                showMessage(errorMessage, 'An error occurred. Please try again.');
+                isFavorite = !newFav;
+                updateFavoriteUI();
+            }
+        });
+
+        // Keyboard shortcut (F key to favorite)
+        document.addEventListener('keydown', (e) => {
+            if (e.target.tagName !== 'INPUT' && currentLink && (e.key === 'f' || e.key === 'F')) {
+                e.preventDefault();
+                favoriteButton.click();
+            }
+        });
+    </script>
 </body>
->>>>>>> e00f6dcf8d6e30133e914d9347f5cc625b7708c3
 </html>

@@ -1,8 +1,10 @@
 import { WebSocketServer } from "ws";
 import findUser from "./utils/findUsers.js";
 import streamVideo from "./utils/streamVideo.js";
+import dotenv from "dotenv";
+dotenv.config();
 
-const wss = new WebSocketServer({ port: 8080 });
+const wss = new WebSocketServer({ port: process.env.PORT || 8080 });
 
 let allUsers = [];
 // Store room state: { roomId: { video: string, currentTime: number, isPlaying: boolean } }

@@ -15,14 +15,38 @@ const allowedOrigins = [
   "https://musor-ten.vercel.app", // frontend in production
 ];
 
+// app.use(
+//   cors({
+//     origin: allowedOrigins,
+//     credentials: true,
+//     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+//     allowedHeaders: ["Content-Type", "Authorization"],
+//   })
+// );
+
 app.use(
   cors({
-    origin: allowedOrigins,
+    origin: function (origin, callback) {
+      const allowedOrigins = [
+        "http://localhost:5173",
+        "http://localhost:8080",
+        "https://musor-ten.vercel.app", // production frontend
+      ];
+
+      // allow requests with no origin (like mobile apps or curl)
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
+
+app.options("*", cors());
 
 // --- Clerk-protected routes ---
 app.get("/protected", requireAuth(), (req, res) => {
@@ -64,6 +88,7 @@ app.use("/notifications", notifications);
 app.get("/", (req, res) => {
   res.json({ status: "OK", message: "API running" });
 });
+
 
 if (process.env.NODE_ENV !== "production") {
   const PORT = process.env.PORT || 5000;

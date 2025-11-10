@@ -1,4 +1,4 @@
-import pool from "../../backend/db/dbconnection.js";
+import pool from "../db/dbconnection.js";
 
 export default async function streamVideo(video, roomId, userId) {
     try {

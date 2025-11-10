@@ -1,5 +1,16 @@
 {
-    "version": 2,
-    "builds": [{ "src": "api/app.js", "use": "@vercel/node" }],
-    "routes": [{ "src": "/.*", "dest": "/api/app.js" }]
-  }
+  "version": 2,
+  "builds": [{ "src": "api/app.js", "use": "@vercel/node" }],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "api/app.js",
+      "headers": {
+        "Access-Control-Allow-Origin": "https://musor-ten.vercel.app",
+        "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization",
+        "Access-Control-Allow-Credentials": "true"
+      }
+    }
+  ]
+}

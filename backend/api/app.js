@@ -46,7 +46,8 @@ app.use(
   })
 );
 
-app.options("/*", cors());
+app.options("*", cors());
+
 
 // --- Clerk-protected routes ---
 app.get("/protected", requireAuth(), (req, res) => {

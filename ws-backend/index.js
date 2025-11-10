@@ -82,11 +82,11 @@ wss.on('connection', function connection(ws) {
             };
             
             // Save video to database (optional)
-            try {
-                await streamVideo(video, roomId, currentUser.userId);
-            } catch (error) {
-                console.error("Error saving video:", error);
-            }
+            // try {
+            //     await streamVideo(video, roomId, currentUser.userId);
+            // } catch (error) {
+            //     console.error("Error saving video:", error);
+            // }
             
             // Extract video ID from embed URL for better compatibility
             let videoId = video;

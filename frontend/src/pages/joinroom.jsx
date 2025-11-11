@@ -726,6 +726,9 @@ const JoinRoom = () => {
           </div>
         )}
 
+        
+
+
         {/* Not Connected State */}
         {!isConnected && !isLoading && (
           <div className="max-w-2xl mx-auto">

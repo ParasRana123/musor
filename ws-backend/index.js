@@ -2,6 +2,7 @@ import { WebSocketServer } from "ws";
 import findUser from "./utils/findUsers.js";
 import streamVideo from "./utils/streamVideo.js";
 import dotenv from "dotenv";
+import { ca } from "zod/locales";
 dotenv.config();
 
 const wss = new WebSocketServer({ port: process.env.PORT || 8080 });
@@ -230,6 +231,35 @@ wss.on('connection', function connection(ws) {
                         );
                     } catch (e) {
                         console.error("Error sending time sync:", e);
+                    }
+                }
+            });
+        }
+
+        if(parsedMessage.type === "chat") {
+            const chat = parsedMessage.chat;
+            const roomId = parsedMessage.roomId;
+            const currentUser = findUser(allUsers , ws);
+            console.log("Chat: " , chat);
+            console.log("Room ID: " , roomId);
+            console.log("Chat: " , chat);
+            if(!currentUser || !currentUser.userId) {
+                console.log("User not found");
+                return null;
+            }
+            allUsers.forEach((user) => {
+                if(user.rooms && user.rooms.includes(roomId)) {
+                    try {
+                        user.ws.send(
+                            JSON.stringify({
+                                type: "chat",
+                                chat: chat,
+                                roomId,
+                                senderId: currentUser.userId
+                            })
+                        );
+                    } catch(e) {
+                        console.log("Erro sending chat to the user: " , e);
                     }
                 }
             });

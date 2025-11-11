@@ -84,36 +84,36 @@ router.post("/", requireAuth(), async (req, res) => {
 });
 
 // Get all friends
-// router.get("/", requireAuth(), async (req, res) => {
-//   try {
-//     const { userId } = req.auth;
+router.get("/", requireAuth(), async (req, res) => {
+  try {
+    const { userId } = req.auth;
 
-//     // Get current user
-//     const user = await pool.query(
-//       "SELECT * FROM users WHERE clerk_user_id = $1",
-//       [userId]
-//     );
+    // Get current user
+    const user = await pool.query(
+      "SELECT * FROM users WHERE clerk_user_id = $1",
+      [userId]
+    );
 
-//     if (user.rows.length === 0) {
-//       return res.status(404).json({ error: "User not found" });
-//     }
+    if (user.rows.length === 0) {
+      return res.status(404).json({ error: "User not found" });
+    }
 
-//     // Get all friends (both directions)
-//     const friends = await pool.query(
-//       `SELECT u.id, u.clerk_user_id, u.username, u.email, f.created_at
-//        FROM friends f
-//        JOIN users u ON (f.friend_id = u.id AND f.user_id = $1) OR (f.user_id = u.id AND f.friend_id = $1)
-//        WHERE u.id != $1
-//        ORDER BY f.created_at DESC`,
-//       [user.rows[0].id]
-//     );
+    // Get all friends (both directions)
+    const friends = await pool.query(
+      `SELECT u.id, u.clerk_user_id, u.username, u.email, f.created_at
+       FROM friends f
+       JOIN users u ON (f.friend_id = u.id AND f.user_id = $1) OR (f.user_id = u.id AND f.friend_id = $1)
+       WHERE u.id != $1
+       ORDER BY f.created_at DESC`,
+      [user.rows[0].id]
+    );
 
-//     res.status(200).json({ friends: friends.rows });
-//   } catch (error) {
-//     console.error("Error getting friends:", error);
-//     res.status(500).json({ error: "Internal server error" });
-//   }
-// });
+    res.status(200).json({ friends: friends.rows });
+  } catch (error) {
+    console.error("Error getting friends:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
 
 router.get("/getall" , requireAuth() , async (req , res) => {
   try {

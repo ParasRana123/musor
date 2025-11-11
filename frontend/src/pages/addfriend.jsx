@@ -25,7 +25,14 @@ const AddFriend = () => {
     setError("");
 
     try {
-      const response = await axios.get(`${backendapi}/getall`);
+      const token = await getToken();
+      const response = await axios.get(`${backendapi}/getall` , {
+        headers: {
+          "Content-Type" : "application/json",
+          Authorization: `Bearer ${token}`
+        }
+      });
+
       const allUsers = response.data || [];
       console.log(allUsers)
       // Filter users by search query (username or email)
@@ -37,13 +44,14 @@ const AddFriend = () => {
       );
 
       // Check which users are already friends
-      const friendsUserIds = new Set(friends.map((f) => f.clerk_user_id));
-      const resultsWithStatus = filtered.map((user) => ({
-        ...user,
-        isFriend: friendsUserIds.has(user.clerk_user_id),
-      }));
+      // const friendsUserIds = new Set(friends.map((f) => f.clerk_user_id));
+      // const resultsWithStatus = filtered.map((user) => ({
+      //   ...user,
+      //   isFriend: friendsUserIds.has(user.clerk_user_id),
+      // }));
 
-      setSearchResults(resultsWithStatus);
+      // setSearchResults(resultsWithStatus);
+      setSearchResults(filtered);
     } catch (error) {
       console.error("Error searching users:", error);
       setError("Failed to search users. Please try again.");
@@ -64,7 +72,17 @@ const AddFriend = () => {
         },
       });
 
-      setFriends(response.data.friends || []);
+      const data = response?.data;
+      if (Array.isArray(data)) {
+        setFriends(data);
+      } else if (Array.isArray(data?.friends)) {
+        setFriends(data.friends);
+      } else {
+        console.warn("Unexpected friends response:", data);
+        setFriends([]);
+      }
+
+
     } catch (error) {
       console.error("Error fetching friends:", error);
       if (error.response?.status === 404) {
@@ -81,60 +99,61 @@ const AddFriend = () => {
   }, [backendapi, getToken]);
 
   // Add a friend
-  const handleAddFriend = useCallback(
-    async (friendUserId) => {
-      if (addingFriendId) return;
+const handleAddFriend = useCallback(
+  async (friendUserId) => {
+    if (addingFriendId) return;
 
-      setAddingFriendId(friendUserId);
-      setError("");
-      setSuccessMessage("");
+    setAddingFriendId(friendUserId);
+    setError("");
+    setSuccessMessage("");
 
-      try {
-        const token = await getToken();
-        await axios.post(
-          `${backendapi}/friends`,
-          { friendUserId },
-          {
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
+    // Optimistic update – set status immediately
+    setSearchResults((prev) =>
+      prev.map((user) =>
+        user.clerk_user_id === friendUserId
+          ? { ...user, status: "requested" }
+          : user
+      )
+    );
 
-        setSuccessMessage("Friend request sent successfully!");
-        setTimeout(() => setSuccessMessage(""), 3000);
-
-        // Refresh friends list and search results
-        await fetchFriends();
-        if (searchQuery) {
-          searchUsers(searchQuery);
+    try {
+      const token = await getToken();
+      await axios.post(
+        `${backendapi}/friends`,
+        { friendUserId },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
         }
-      } catch (error) {
-        console.error("Error adding friend:", error);
-        let errorMessage = "Failed to add friend. Please try again.";
-        
-        if (error.response) {
-          // Server responded with error
-          errorMessage = error.response.data?.error || errorMessage;
-          if (error.response.status === 404) {
-            errorMessage = "User not found. Please make sure you're logged in.";
-          } else if (error.response.status === 400) {
-            errorMessage = error.response.data?.error || "Invalid request. Please try again.";
-          }
-        } else if (error.request) {
-          // Request made but no response
-          errorMessage = "Network error. Please check your connection.";
-        }
-        
-        setError(errorMessage);
-        setTimeout(() => setError(""), 5000);
-      } finally {
-        setAddingFriendId(null);
+      );
+
+      setSuccessMessage("Friend request sent successfully!");
+      setTimeout(() => setSuccessMessage(""), 3000);
+
+      // ✅ Don't call fetchFriends() here — it removes requested state
+      // ✅ Don't call searchUsers() again — it resets the list
+      // We'll rely on backend sync later (on mount or accept)
+    } catch (error) {
+      console.error("Error adding friend:", error);
+      let errorMessage = "Failed to add friend. Please try again.";
+
+      if (error.response) {
+        errorMessage = error.response.data?.error || errorMessage;
+      } else if (error.request) {
+        errorMessage = "Network error. Please check your connection.";
       }
-    },
-    [backendapi, getToken, fetchFriends, searchQuery, searchUsers, addingFriendId]
-  );
+
+      setError(errorMessage);
+      setTimeout(() => setError(""), 5000);
+    } finally {
+      setAddingFriendId(null);
+    }
+  },
+  [backendapi, getToken, addingFriendId]
+);
+
 
   const handleAcceptFriend = useCallback(async (friendUserId) => {
   try {
@@ -303,13 +322,13 @@ const AddFriend = () => {
               Search Results
             </h2>
             <div className="space-y-3 max-h-[calc(100vh-350px)] overflow-y-auto pr-2 custom-scrollbar">
-              {searchResults.length === 0 && searchQuery && !isLoading && (
+              {Array.isArray(searchResults) && searchResults.length === 0 && searchQuery && !isLoading && (
                 <div className="bg-gradient-to-br from-gray-900/50 to-black/50 border border-gray-800 rounded-xl p-8 text-center">
                   <p className="text-gray-400">No users found</p>
                 </div>
               )}
 
-              {searchResults.map((user) => (
+              {Array.isArray(searchResults) && searchResults.map((user) => (
                 <div
                   key={user.clerk_user_id}
                   className="group bg-gradient-to-br from-gray-900/50 to-black/50 border border-gray-800 rounded-xl overflow-hidden hover:border-white/50 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl"
@@ -398,7 +417,7 @@ const AddFriend = () => {
           {/* Right: My Friends */}
           <div>
             <h2 className="text-2xl font-bold text-white mb-4 px-2">
-              My Friends ({friends.length})
+              My Friends ({Array.isArray(friends) ? friends.length : 0})
             </h2>
             <div className="space-y-3 max-h-[calc(100vh-350px)] overflow-y-auto pr-2 custom-scrollbar">
               {isLoadingFriends ? (
@@ -406,7 +425,7 @@ const AddFriend = () => {
                   <Loader2 className="w-8 h-8 text-white animate-spin mx-auto mb-4" />
                   <p className="text-gray-400">Loading friends...</p>
                 </div>
-              ) : friends.length === 0 ? (
+              ) : !Array.isArray(friends) || friends.length === 0 ? (
                 <div className="bg-gradient-to-br from-gray-900/50 to-black/50 border border-gray-800 rounded-xl p-8 text-center">
                   <Users className="w-12 h-12 text-gray-600 mx-auto mb-4" />
                   <p className="text-gray-400">No friends yet</p>

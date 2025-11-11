@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Users, Play, Video, Loader2, Youtube, LogOut } from "lucide-react";
+import { Users, Play, Video, Loader2, Youtube, LogOut, Send, MessageCircle } from "lucide-react";
 import { useAuth } from "@clerk/clerk-react";
 
 const JoinRoom = () => {
@@ -13,6 +13,8 @@ const JoinRoom = () => {
   const [roomUsers, setRoomUsers] = useState([]);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [chatMessage , setChatMessage] = useState("");
+  const [messages , setMessages] = useState([]);
   
   const wsRef = useRef(null);
   const playerRef = useRef(null);
@@ -20,6 +22,7 @@ const JoinRoom = () => {
   const pendingSyncRef = useRef(null);
   const syncIntervalRef = useRef(null);
   const lastSyncTimeRef = useRef(0);
+  const chatEndRef = useRef(null);
   const { userId } = useAuth();
   const wsUrl = import.meta.env.VITE_WS_URL || "ws://localhost:8080";
 
@@ -66,6 +69,19 @@ const JoinRoom = () => {
     }
   }, []);
 
+  // send chat message
+  const sendChatMessage = useCallback(() => {
+    if(!chatMessage.trim() || !isConnected || !wsRef.current) return;
+
+    wsRef.current.send(JSON.stringify({
+      type: "chat",
+      chat: chatMessage,
+      roomId: roomId
+    }));
+
+    setChatMessage("");
+  } , [chatMessage , isConnected , roomId]);
+
   // Connect to WebSocket
   const connectWebSocket = useCallback(() => {
     if (!roomId.trim()) {
@@ -110,6 +126,15 @@ const JoinRoom = () => {
           }
 
           const message = JSON.parse(event.data);
+
+          if(message.type === "chat") {
+            setMessages(prev => [...prev , {
+              text: message.chat,
+              senderId: message.senderId,
+              timestamp: new Date(),
+              isOwn: message.senderId === userId
+            }]);
+          }
           
           if (message.type === "stream") {
             // Received video stream from another user - ALL users should play the same video
@@ -665,68 +690,128 @@ const JoinRoom = () => {
 
         {/* Video Stream Section */}
         {isConnected && (
-          <div className="max-w-5xl mx-auto">
-            <div className="bg-gradient-to-br from-gray-900 to-black border border-gray-800 rounded-3xl overflow-hidden shadow-2xl">
-              {/* Player Header */}
-              <div className="bg-gradient-to-r from-gray-800 via-gray-700 to-gray-800 px-6 py-4 border-b border-gray-700">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center">
-                      <Play className="w-5 h-5 text-white" />
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Video Player Section */}
+            <div className="lg:col-span-2">
+              <div className="bg-gradient-to-br from-gray-900 to-black border border-gray-800 rounded-3xl overflow-hidden shadow-2xl">
+                <div className="bg-gradient-to-r from-gray-800 via-gray-700 to-gray-800 px-6 py-4 border-b border-gray-700">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center">
+                        <Play className="w-5 h-5 text-white" />
+                      </div>
+                      <div>
+                        <p className="text-white font-semibold">Room: {roomId}</p>
+                        <p className="text-gray-400 text-sm">Synchronized playback</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-white font-semibold">Room: {roomId}</p>
-                      <p className="text-gray-400 text-sm">Synchronized playback</p>
+                    <Youtube className="w-6 h-6 text-red-500" />
+                  </div>
+                </div>
+
+                {currentVideo ? (
+                  <div className="relative aspect-video bg-black">
+                    <div
+                      id="youtube-player"
+                      className="w-full h-full"
+                    ></div>
+                  </div>
+                ) : (
+                  <div className="relative aspect-video bg-black flex items-center justify-center">
+                    <div className="text-center">
+                      <Video className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+                      <p className="text-gray-400">No video playing</p>
+                      <p className="text-gray-500 text-sm mt-2">Share a video URL below to start</p>
                     </div>
                   </div>
-                  <Youtube className="w-6 h-6 text-red-500" />
+                )}
+
+                <div className="bg-gradient-to-r from-gray-900 via-black to-gray-900 px-6 py-4">
+                  <div className="flex items-center gap-4">
+                    <input
+                      type="text"
+                      value={videoInput}
+                      onChange={(e) => setVideoInput(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && streamVideo()}
+                      placeholder="Enter YouTube URL to share..."
+                      className="flex-1 bg-gray-900/50 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-white/50"
+                    />
+                    <button
+                      onClick={streamVideo}
+                      disabled={!videoInput.trim()}
+                      className="px-6 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg font-semibold hover:from-green-500 hover:to-emerald-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    >
+                      <Play className="w-4 h-4" />
+                      <span>Stream</span>
+                    </button>
+                  </div>
                 </div>
               </div>
+            </div>
 
-              {/* Video Embed */}
-              {currentVideo ? (
-                <div className="relative aspect-video bg-black">
-                  <div
-                    id="youtube-player"
-                    className="w-full h-full"
-                  ></div>
-                </div>
-              ) : (
-                <div className="relative aspect-video bg-black flex items-center justify-center">
-                  <div className="text-center">
-                    <Video className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-                    <p className="text-gray-400">No video playing</p>
-                    <p className="text-gray-500 text-sm mt-2">Share a video URL below to start</p>
+            {/* Chat Section */}
+            <div className="lg:col-span-1">
+              <div className="bg-gradient-to-br from-gray-900 to-black border border-gray-800 rounded-3xl overflow-hidden shadow-2xl h-full flex flex-col">
+                <div className="bg-gradient-to-r from-gray-800 via-gray-700 to-gray-800 px-6 py-4 border-b border-gray-700">
+                  <div className="flex items-center gap-3">
+                    <MessageCircle className="w-5 h-5 text-white" />
+                    <h3 className="text-white font-semibold">Room Chat</h3>
                   </div>
                 </div>
-              )}
 
-              {/* Stream Video Input */}
-              <div className="bg-gradient-to-r from-gray-900 via-black to-gray-900 px-6 py-4">
-                <div className="flex items-center gap-4">
-                  <input
-                    type="text"
-                    value={videoInput}
-                    onChange={(e) => setVideoInput(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && streamVideo()}
-                    placeholder="Enter YouTube URL to share..."
-                    className="flex-1 bg-gray-900/50 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-white/50"
-                  />
-                  <button
-                    onClick={streamVideo}
-                    disabled={!videoInput.trim()}
-                    className="px-6 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg font-semibold hover:from-green-500 hover:to-emerald-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                  >
-                    <Play className="w-4 h-4" />
-                    <span>Stream</span>
-                  </button>
+                <div className="flex-1 overflow-y-auto p-4 space-y-3" style={{ maxHeight: "500px" }}>
+                  {messages.length === 0 ? (
+                    <div className="flex items-center justify-center h-full">
+                      <p className="text-gray-500 text-sm">No messages yet. Start the conversation!</p>
+                    </div>
+                  ) : (
+                    messages.map((msg, idx) => (
+                      <div
+                        key={idx}
+                        className={`flex ${msg.isOwn ? 'justify-end' : 'justify-start'}`}
+                      >
+                        <div
+                          className={`max-w-xs px-4 py-2 rounded-2xl ${
+                            msg.isOwn
+                              ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white'
+                              : 'bg-gray-800 text-gray-200'
+                          }`}
+                        >
+                          <p className="text-sm break-words">{msg.text}</p>
+                          <p className={`text-xs mt-1 ${msg.isOwn ? 'text-blue-100' : 'text-gray-500'}`}>
+                            {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                  <div ref={chatEndRef} />
+                </div>
+
+                <div className="bg-gradient-to-r from-gray-900 via-black to-gray-900 px-4 py-4 border-t border-gray-700">
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="text"
+                      value={chatMessage}
+                      onChange={(e) => setChatMessage(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && sendChatMessage()}
+                      placeholder="Type a message..."
+                      className="flex-1 bg-gray-900/50 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-white/50 text-sm"
+                    />
+                    <button
+                      onClick={sendChatMessage}
+                      disabled={!chatMessage.trim()}
+                      className="p-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-500 hover:to-purple-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Send className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         )}
 
-        
 
 
         {/* Not Connected State */}

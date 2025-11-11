@@ -84,33 +84,74 @@ router.post("/", requireAuth(), async (req, res) => {
 });
 
 // Get all friends
-router.get("/", requireAuth(), async (req, res) => {
+// router.get("/", requireAuth(), async (req, res) => {
+//   try {
+//     const { userId } = req.auth;
+
+//     // Get current user
+//     const user = await pool.query(
+//       "SELECT * FROM users WHERE clerk_user_id = $1",
+//       [userId]
+//     );
+
+//     if (user.rows.length === 0) {
+//       return res.status(404).json({ error: "User not found" });
+//     }
+
+//     // Get all friends (both directions)
+//     const friends = await pool.query(
+//       `SELECT u.id, u.clerk_user_id, u.username, u.email, f.created_at
+//        FROM friends f
+//        JOIN users u ON (f.friend_id = u.id AND f.user_id = $1) OR (f.user_id = u.id AND f.friend_id = $1)
+//        WHERE u.id != $1
+//        ORDER BY f.created_at DESC`,
+//       [user.rows[0].id]
+//     );
+
+//     res.status(200).json({ friends: friends.rows });
+//   } catch (error) {
+//     console.error("Error getting friends:", error);
+//     res.status(500).json({ error: "Internal server error" });
+//   }
+// });
+
+router.get("/getall" , requireAuth() , async (req , res) => {
   try {
     const { userId } = req.auth;
 
-    // Get current user
-    const user = await pool.query(
-      "SELECT * FROM users WHERE clerk_user_id = $1",
-      [userId]
-    );
+    const allUsers = await pool.query("SELECT username, email, clerk_user_id FROM users WHERE clerk_user_id != $1", [userId]);
+    const sentRequests = await pool.query(
+      `SELECT sender FROM motifications WHERE reciever = $1 AND type = 'send_req'`, [userId]
+    )
 
-    if (user.rows.length === 0) {
-      return res.status(404).json({ error: "User not found" });
-    }
+    const receivedRequests = await pool.query(
+      `SELECT sender FROM motifications WHERE reciever = $1 AND type = 'send_req'`, [userId]
+    )
 
-    // Get all friends (both directions)
     const friends = await pool.query(
-      `SELECT u.id, u.clerk_user_id, u.username, u.email, f.created_at
-       FROM friends f
-       JOIN users u ON (f.friend_id = u.id AND f.user_id = $1) OR (f.user_id = u.id AND f.friend_id = $1)
-       WHERE u.id != $1
-       ORDER BY f.created_at DESC`,
-      [user.rows[0].id]
-    );
+      `SELECT u.clerk_user_id 
+      FROM friends f
+      JOIN users u ON (f.friend_id = u.id AND f.user_id = (SELECT id FROM users WHERE clerk_user_id = $1))
+      OR (f.user_id = u.id AND f.friend_id = (SELECT id FROM users WHERE clerk_user_id = $1))`,
+      [userId]
+    )
 
-    res.status(200).json({ friends: friends.rows });
-  } catch (error) {
-    console.error("Error getting friends:", error);
+    const sentSet = new Set(sentRequests.rows.map(r => r.reciever));
+    const receivedSet = new Set(receivedRequests.rows.map(r => r.sender));
+    const friendSet = new Set(friends.rows.map(f => f.clerk_user_id));
+
+    const usersWithStatus = allUsers.rows.map(user => {
+      let status = "none";
+      if(friendSet.has(user.clerk_user_id)) status = "friend";
+      else if(sentSet.has(user.clerk_user_id)) status = "requested";
+      else if(receivedSet.has(user.clerk_user_id)) status = "incoming";
+      
+      return { ...user , status };
+    })
+
+    res.status(400).json(usersWithStatus);
+  } catch(e) {
+    console.log("Error fetching all users:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });

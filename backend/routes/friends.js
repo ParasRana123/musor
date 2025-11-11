@@ -121,7 +121,7 @@ router.get("/getall" , requireAuth() , async (req , res) => {
 
     const allUsers = await pool.query("SELECT username, email, clerk_user_id FROM users WHERE clerk_user_id != $1", [userId]);
     const sentRequests = await pool.query(
-      `SELECT sender FROM motifications WHERE reciever = $1 AND type = 'send_req'`, [userId]
+      `SELECT reciever FROM motifications WHERE sender = $1 AND type = 'send_req'`, [userId]
     )
 
     const receivedRequests = await pool.query(
@@ -149,12 +149,44 @@ router.get("/getall" , requireAuth() , async (req , res) => {
       return { ...user , status };
     })
 
-    res.status(400).json(usersWithStatus);
+    res.status(200).json(usersWithStatus);
   } catch(e) {
     console.log("Error fetching all users:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
+
+router.post("/accept", requireAuth(), async (req, res) => {
+  try {
+    const { userId } = req.auth;
+    const { friendUserId } = req.body;
+
+    const user = await pool.query("SELECT * FROM users WHERE clerk_user_id = $1", [userId]);
+    const friend = await pool.query("SELECT * FROM users WHERE clerk_user_id = $1", [friendUserId]);
+
+    if (!user.rows.length || !friend.rows.length) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // Delete pending request
+    await pool.query(
+      "DELETE FROM motifications WHERE sender = $1 AND reciever = $2 AND type = 'send_req'",
+      [friendUserId, userId]
+    );
+
+    // Add to friends
+    await pool.query(
+      "INSERT INTO friends (user_id, friend_id) VALUES ($1, $2)",
+      [user.rows[0].id, friend.rows[0].id]
+    );
+
+    res.status(200).json({ message: "Friend request accepted" });
+  } catch (error) {
+    console.error("Error accepting friend:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 
 // Remove a friend
 router.delete("/:friendUserId", requireAuth(), async (req, res) => {

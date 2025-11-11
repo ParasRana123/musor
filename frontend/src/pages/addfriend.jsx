@@ -136,6 +136,32 @@ const AddFriend = () => {
     [backendapi, getToken, fetchFriends, searchQuery, searchUsers, addingFriendId]
   );
 
+  const handleAcceptFriend = useCallback(async (friendUserId) => {
+  try {
+    const token = await getToken();
+    await axios.post(
+      `${backendapi}/friends/accept`,
+      { friendUserId },
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    setSuccessMessage("Friend request accepted!");
+    setTimeout(() => setSuccessMessage(""), 3000);
+    await fetchFriends();
+    if (searchQuery) searchUsers(searchQuery);
+  } catch (error) {
+    console.error("Error accepting friend:", error);
+    setError("Failed to accept friend request.");
+    setTimeout(() => setError(""), 3000);
+  }
+}, [backendapi, getToken, fetchFriends, searchQuery, searchUsers]);
+
+
   // Remove a friend
   const handleRemoveFriend = useCallback(
     async (friendUserId) => {
@@ -302,7 +328,7 @@ const AddFriend = () => {
                         </p>
                       </div>
                     </div>
-                    {user.isFriend ? (
+                    {/* {user.isFriend ? (
                       <button
                         onClick={() => handleRemoveFriend(user.clerk_user_id)}
                         className="px-4 py-2 bg-red-900/20 border border-red-800 text-red-400 rounded-lg hover:bg-red-900/30 transition-all flex items-center gap-2"
@@ -323,7 +349,46 @@ const AddFriend = () => {
                         )}
                         <span>Add</span>
                       </button>
-                    )}
+                    )} */}
+                    {user.status === "friend" ? (
+  <button
+    onClick={() => handleRemoveFriend(user.clerk_user_id)}
+    className="px-4 py-2 bg-red-900/20 border border-red-800 text-red-400 rounded-lg hover:bg-red-900/30 transition-all flex items-center gap-2"
+  >
+    <X className="w-4 h-4" />
+    <span>Remove</span>
+  </button>
+) : user.status === "requested" ? (
+  <button
+    disabled
+    className="px-4 py-2 bg-yellow-900/20 border border-yellow-700 text-yellow-400 rounded-lg flex items-center gap-2 cursor-not-allowed"
+  >
+    <Loader2 className="w-4 h-4 animate-pulse" />
+    <span>Requested</span>
+  </button>
+) : user.status === "incoming" ? (
+  <button
+    onClick={() => handleAcceptFriend(user.clerk_user_id)}
+    className="px-4 py-2 bg-green-900/20 border border-green-800 text-green-400 rounded-lg hover:bg-green-900/30 transition-all flex items-center gap-2"
+  >
+    <Check className="w-4 h-4" />
+    <span>Accept</span>
+  </button>
+) : (
+  <button
+    onClick={() => handleAddFriend(user.clerk_user_id)}
+    disabled={addingFriendId === user.clerk_user_id}
+    className="px-4 py-2 bg-green-900/20 border border-green-800 text-green-400 rounded-lg hover:bg-green-900/30 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+  >
+    {addingFriendId === user.clerk_user_id ? (
+      <Loader2 className="w-4 h-4 animate-spin" />
+    ) : (
+      <Check className="w-4 h-4" />
+    )}
+    <span>Add</span>
+  </button>
+)}
+
                   </div>
                 </div>
               ))}

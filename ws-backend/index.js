@@ -2,7 +2,6 @@ import { WebSocketServer } from "ws";
 import findUser from "./utils/findUsers.js";
 import streamVideo from "./utils/streamVideo.js";
 import dotenv from "dotenv";
-import { ca } from "zod/locales";
 dotenv.config();
 
 const wss = new WebSocketServer({ port: process.env.PORT || 8080 });

@@ -22,8 +22,12 @@ export default function App() {
   return (
     <Router>
       <div className="w-screen min-h-screen">
-        <SignedOut>
+        <SignedOut> 
+          <div className="w-[80px] border border-white p-2 font-bold m-2 flex items-center justify-center ml-auto">
           <SignInButton />
+
+          </div>
+          <Landing />
         </SignedOut>
 
         <SignedIn>

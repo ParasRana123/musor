@@ -9,9 +9,10 @@ const Playlist = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [isRemoving, setIsRemoving] = useState(false);
-  
+
   const { getToken } = useAuth();
   const backendapi = import.meta.env.VITE_BACKEND_URL;
+  const youtubeApiKey = import.meta.env.VITE_YOUTUBE_API_KEY; // ✅ add this in your .env
 
   // ✅ Extract only the videoId from any YouTube URL
   const extractVideoId = (url) => {
@@ -28,14 +29,39 @@ const Playlist = () => {
     return url; // If it's already an ID
   };
 
-  // ✅ Always form embed link using videoId
-  const getEmbedLink = (link) => `https://www.youtube.com/embed/${extractVideoId(link)}`;
+  const getEmbedLink = (link) =>
+    `https://www.youtube.com/embed/${extractVideoId(link)}`;
 
-  // ✅ Fetch playlist from backend
+  // ✅ Fetch actual video titles from YouTube API
+  const fetchVideoTitles = async (videoIds) => {
+    try {
+      const response = await axios.get(
+        `https://www.googleapis.com/youtube/v3/videos`,
+        {
+          params: {
+            part: "snippet",
+            id: videoIds.join(","),
+            key: youtubeApiKey,
+          },
+        }
+      );
+
+      const titles = {};
+      response.data.items.forEach((item) => {
+        titles[item.id] = item.snippet.title;
+      });
+      return titles;
+    } catch (err) {
+      console.error("Error fetching video titles:", err);
+      return {};
+    }
+  };
+
+  // ✅ Fetch playlist + video titles
   const fetchPlaylist = useCallback(async () => {
     setIsLoading(true);
     setError("");
-    
+
     try {
       const token = await getToken();
       const response = await axios.get(`${backendapi}/playlist`, {
@@ -46,16 +72,25 @@ const Playlist = () => {
       });
 
       const data = response.data.playlist || [];
-
-      // Normalize all to videoId form
-      const normalized = data.map(item => ({
+      const normalized = data.map((item) => ({
         ...item,
-        musicid: extractVideoId(item.musicid)
+        musicid: extractVideoId(item.musicid),
       }));
 
-      setPlaylist(normalized);
-      if (normalized.length > 0) {
-        setSelectedLink(normalized[0].musicid);
+      // Fetch titles
+      const ids = normalized.map((i) => i.musicid);
+      const titles = await fetchVideoTitles(ids);
+
+      // Add titles into playlist
+      const playlistWithTitles = normalized.map((item) => ({
+        ...item,
+        title: titles[item.musicid] || "Unknown Title",
+      }));
+
+      setPlaylist(playlistWithTitles);
+
+      if (playlistWithTitles.length > 0) {
+        setSelectedLink(playlistWithTitles[0].musicid);
       }
     } catch (err) {
       console.error("Error fetching playlist:", err);
@@ -65,44 +100,46 @@ const Playlist = () => {
     }
   }, [backendapi, getToken]);
 
-  // ✅ Remove song from playlist
-  const handleRemoveFromPlaylist = useCallback(async (link) => {
-    if (isRemoving) return;
-    
-    setIsRemoving(true);
-    try {
-      const token = await getToken();
-      const videoId = extractVideoId(link);
+  const handleRemoveFromPlaylist = useCallback(
+    async (link) => {
+      if (isRemoving) return;
+      setIsRemoving(true);
 
-      await axios.post(
-        `${backendapi}/music`,
-        { link: videoId, fav: false },
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      try {
+        const token = await getToken();
+        const videoId = extractVideoId(link);
 
-      // Remove from local playlist
-      setPlaylist((prev) => prev.filter((item) => item.musicid !== videoId));
+        await axios.post(
+          `${backendapi}/music`,
+          { link: videoId, fav: false },
+          {
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
 
-      // Update selected video
-      setSelectedLink((prev) => {
-        if (prev === videoId) {
-          const remaining = playlist.filter((item) => item.musicid !== videoId);
-          return remaining.length > 0 ? remaining[0].musicid : "";
-        }
-        return prev;
-      });
-    } catch (err) {
-      console.error("Error removing from playlist:", err);
-      setError("Failed to remove from playlist. Please try again.");
-    } finally {
-      setIsRemoving(false);
-    }
-  }, [backendapi, getToken, playlist]);
+        setPlaylist((prev) => prev.filter((item) => item.musicid !== videoId));
+
+        setSelectedLink((prev) => {
+          if (prev === videoId) {
+            const remaining = playlist.filter(
+              (item) => item.musicid !== videoId
+            );
+            return remaining.length > 0 ? remaining[0].musicid : "";
+          }
+          return prev;
+        });
+      } catch (err) {
+        console.error("Error removing from playlist:", err);
+        setError("Failed to remove from playlist. Please try again.");
+      } finally {
+        setIsRemoving(false);
+      }
+    },
+    [backendapi, getToken, playlist]
+  );
 
   useEffect(() => {
     fetchPlaylist();
@@ -111,11 +148,6 @@ const Playlist = () => {
   const getThumbnail = (link) => {
     const videoId = extractVideoId(link);
     return `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
-  };
-
-  const getVideoTitle = (link) => {
-    const id = extractVideoId(link);
-    return id ? `Video ${id}` : "Unknown Video";
   };
 
   return (
@@ -129,7 +161,9 @@ const Playlist = () => {
               My Playlist
             </h1>
           </div>
-          <p className="text-gray-400 text-lg">Your favorite songs and videos</p>
+          <p className="text-gray-400 text-lg">
+            Your favorite songs and videos
+          </p>
         </div>
 
         {error && (
@@ -155,12 +189,11 @@ const Playlist = () => {
               {playlist.length > 0 ? (
                 <div className="space-y-2 max-h-[calc(100vh-250px)] overflow-y-auto pr-2 custom-scrollbar">
                   {playlist.map((item, index) => {
-                    const videoId = extractVideoId(item.musicid);
-                    const isSelected = selectedLink === videoId;
+                    const isSelected = selectedLink === item.musicid;
                     return (
                       <div
-                        key={videoId || index}
-                        onClick={() => setSelectedLink(videoId)}
+                        key={item.musicid || index}
+                        onClick={() => setSelectedLink(item.musicid)}
                         className={`group cursor-pointer bg-gradient-to-br from-gray-900/50 to-black/50 border rounded-xl overflow-hidden transition-all duration-300 hover:scale-[1.02] hover:shadow-xl ${
                           isSelected
                             ? "border-white/50 bg-white/5"
@@ -170,8 +203,8 @@ const Playlist = () => {
                         <div className="flex gap-2">
                           <div className="relative w-24 h-20 flex-shrink-0 bg-gray-900">
                             <img
-                              src={getThumbnail(videoId)}
-                              alt={getVideoTitle(videoId)}
+                              src={getThumbnail(item.musicid)}
+                              alt={item.title}
                               className="w-full h-full object-cover"
                             />
                             <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 flex items-center justify-center">
@@ -180,12 +213,12 @@ const Playlist = () => {
                           </div>
                           <div className="p-2 flex-1 flex items-center justify-between">
                             <p className="text-white text-xs font-medium line-clamp-2 flex-1">
-                              {getVideoTitle(videoId)}
+                              {item.title}
                             </p>
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleRemoveFromPlaylist(videoId);
+                                handleRemoveFromPlaylist(item.musicid);
                               }}
                               className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded hover:bg-red-900/20 text-red-400 hover:text-red-300"
                               title="Remove"

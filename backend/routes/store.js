@@ -7,7 +7,7 @@ const router = express.Router();
 router.post("/", requireAuth(), async (req, res) => {
   try { 
     console.log(req.body)
-    const { userId } = req.auth; 
+    const { userId } = req.auth;
     const user=await pool.query("SELECT * FROM users WHERE clerk_user_id = $1", [userId]) 
     if (user.rows.length === 0) {
       return res.status(404).json({ error: "User not found" });
@@ -26,10 +26,12 @@ router.post("/", requireAuth(), async (req, res) => {
         }
       });
     }
+
     const exist = await pool.query(
       "SELECT * FROM music WHERE musicid = $1 AND clerk_user_id = $2",
       [req.body.link, user.rows[0].clerk_user_id]
     );
+
     if (exist.rows.length > 0) { 
       const response=await pool.query(
         "UPDATE music SET isfav = $1 WHERE musicid = $2 AND clerk_user_id = $3",

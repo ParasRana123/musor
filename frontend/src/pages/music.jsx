@@ -87,7 +87,7 @@ const MusicPlayer = () => {
     try {
       const token = await getToken();
       const check = await axios.get(
-        `${backendapi}/music/checkifliked?link=${link}`,
+        `${backendapi}/music/checkifliked?link=${videoId}`,
         {
           headers: {
             "Content-Type": "application/json",
@@ -131,11 +131,12 @@ const MusicPlayer = () => {
       }
 
       console.log("Sending favorite request:", { link, fav: newFav });
-      
+
+      const videoId = extractVideoId(link);
       const response = await axios.post(
         `${backendapi}/music`,
         {
-          link,
+          link: videoId,
           fav: newFav,
         },
         {
@@ -145,6 +146,8 @@ const MusicPlayer = () => {
           },
         }
       );
+
+
 
       console.log("✅ Response:", response.data);
       

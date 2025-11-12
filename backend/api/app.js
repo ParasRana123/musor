@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import { clerkClient, requireAuth } from "@clerk/express";
 import dotenv from "dotenv";
+import pool from "../db/dbconnection.js";
 
 dotenv.config();
 
@@ -99,6 +100,17 @@ app.get("/", (req, res) => {
   res.json({ status: "OK", message: "API running" });
 });
 
+app.get("/user/:id" , async (req , res) => {
+  try {
+    const { id } = req.params;
+    const user = await pool.query("SELECT * FROM users WHERE clerk_user_id = $1" , [id]);
+    if(user.rows.length === 0) return res.status(400).json({ message: "User not found" });
+    res.json({ user: user.rows[0] });
+  } catch(e) {
+    console.log(err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
 
 if (process.env.NODE_ENV !== "production") {
   const PORT = process.env.PORT || 5000;

@@ -57,7 +57,8 @@ export default function App() {
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/sync" element={<SyncUser />} />
-            <Route path="/profile" element={<Profile />} />  
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/profile/:id" element={<Profile />} />
             <Route path="/music" element={<Music />} /> 
             <Route path="/addfriend" element={<AddFriend />} />
             <Route path="/friends" element={<Friends />} />

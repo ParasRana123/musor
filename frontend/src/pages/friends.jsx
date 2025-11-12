@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import axios from "axios";
 import { Users, UserX, Loader2, User, Mail } from "lucide-react";
 import { useAuth } from "@clerk/clerk-react";
+import { useNavigate } from "react-router-dom";
 
 const Friends = () => {
   const [friends, setFriends] = useState([]);
@@ -10,6 +11,7 @@ const Friends = () => {
   const [removingFriendId, setRemovingFriendId] = useState(null);
 
   const { getToken } = useAuth();
+  const navigate = useNavigate();
   const backendapi = import.meta.env.VITE_BACKEND_URL;
 
   // Fetch friends
@@ -163,6 +165,7 @@ const Friends = () => {
                 {friends.map((friend) => (
                   <div
                     key={friend.clerk_user_id}
+                    onClick={() => navigate(`/profile/${friend.clerk_user_id}`)}
                     className="group bg-gradient-to-br from-gray-900/50 to-black/50 border border-gray-800 rounded-xl overflow-hidden hover:border-white/50 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl"
                   >
                     <div className="p-6">

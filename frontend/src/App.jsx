@@ -1,3 +1,4 @@
+
 import {
   SignedIn,
   SignedOut,
@@ -18,14 +19,19 @@ import Playlist from "./pages/playlist";
 import Notifications from "./pages/notifications";
 import Friends from "./pages/friends";
 import JoinRoom from "./pages/joinroom";
+
 export default function App() {
   return (
     <Router>
       <div className="w-screen min-h-screen">
         <SignedOut> 
-          <div className="w-[80px] border border-white p-2 font-bold m-2 flex items-center justify-center ml-auto">
-          <SignInButton />
-
+          <div className="fixed top-6 right-6 z-50">
+            <SignInButton mode="modal">
+              <button className="relative px-8 py-3 bg-white/[0.03] text-white font-semibold text-sm tracking-wider rounded-full border border-white/10 backdrop-blur-[10px] transition-all duration-400 hover:translate-y-[-2px] hover:border-white hover:shadow-[0_0_40px_rgba(255,255,255,0.3)] hover:bg-white/[0.05] overflow-hidden group">
+                <span className="relative z-10">SIGN IN</span>
+                <span className="absolute top-1/2 left-1/2 w-0 h-0 rounded-full bg-white/10 transition-all duration-600 -translate-x-1/2 -translate-y-1/2 group-hover:w-[300px] group-hover:h-[300px]"></span>
+              </button>
+            </SignInButton>
           </div>
           <Landing />
         </SignedOut>
@@ -43,14 +49,6 @@ export default function App() {
               {label : "Notif" , href: "/notifications" },
               {label : "Room" , href: "/joinroom" },
             ]}
-            // socialItems={[
-            //   { label: "Github", href: "https://github.com/AdityaKurani" },
-            //   {
-            //     label: "LinkedIn",
-            //     href: "https://linkedin.com/in/aditya-kurani",
-            //   },
-            //   { label: "Twitter", href: "https://twitter.com/AdityaKurani" },
-            // ]}
             displayItemNumbering={true}
             className="fixed top-0 left-0 z-50 bg-black" 
             logoUrl={logo}

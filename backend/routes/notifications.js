@@ -1,34 +1,54 @@
 import express from "express";
 import pool from "../db/dbconnection.js";
-import { requireAuth } from "@clerk/express";
+import { requireAuth , clerkClient } from "@clerk/express";
 
 const router = express.Router();
 
-// Get all notifications for the current user
 router.get("/", requireAuth(), async (req, res) => {
   try {
     const { userId } = req.auth;
-
-    // Get all notifications where user is the receiver
-    const notifications = await pool.query(
+    const notificationResults = await pool.query(
       `SELECT * FROM motifications WHERE reciever = $1 ORDER BY created_at DESC`,
       [userId]
     );
+    const notifications = notificationResults.rows;
+    if (notifications.length === 0) {
+      return res.status(200).json({ notifications: [] });
+    }
+    const senderIds = [...new Set(notifications.map(n => n.sender))];
+    const senderData = await Promise.all(
+      senderIds.map(async (id) => {
+        try {
+          const user = await clerkClient.users.getUser(id);
+          return {
+            id,
+            username:
+              user.username ||
+              `${user.firstName || ""} ${user.lastName || ""}`.trim() ||
+              "Unknown User",
+            imageUrl: user.imageUrl || null,
+          };
+        } catch (e) {
+          console.warn(`Failed to fetch sender ${id}:`, e.message);
+          return { id, username: "Unknown User", imageUrl: null };
+        }
+      })
+    );
+    const enrichedNotifications = notifications.map((n) => {
+      const senderInfo = senderData.find((u) => u.id === n.sender) || {
+        username: "Unknown User",
+        imageUrl: null,
+      };
+      return { ...n, senderInfo };
+    });
 
-    res.status(200).json({ notifications: notifications.rows });
+    res.status(200).json({ notifications: enrichedNotifications });
   } catch (error) {
     console.error("Error getting notifications:", error);
-    
-    // If table doesn't exist, provide helpful error message
-    if (error.code === '42P01') {
-      return res.status(500).json({ 
-        error: "Notifications table does not exist. Please run the SQL script: backend/db/create_notifications_table.sql" 
-      });
-    }
-    
     res.status(500).json({ error: "Internal server error" });
   }
 });
+
 
 // Send a notification (create a friend request notification)
 router.post("/send", requireAuth(), async (req, res) => {

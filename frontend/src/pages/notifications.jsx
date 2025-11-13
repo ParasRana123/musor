@@ -283,8 +283,23 @@ const Notifications = () => {
                           </div>
                           <div className="flex-1">
                             <p className="text-white font-medium">
-                              <span className="text-gray-400">User {notification.sender?.substring(0, 8)}...</span>{" "}
-                              {getNotificationMessage(notification)}
+                              <div className="flex items-center gap-2">
+  {notification.senderInfo?.imageUrl ? (
+    <img
+      src={notification.senderInfo.imageUrl}
+      alt={notification.senderInfo.username}
+      className="w-10 h-10 rounded-full border border-gray-700"
+    />
+  ) : (
+    <div className="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center text-white font-semibold">
+      {notification.senderInfo?.username?.[0]?.toUpperCase() || "?"}
+    </div>
+  )}
+  <p className="text-white font-medium">
+    <span className="text-gray-300">{notification.senderInfo?.username || "Unknown User"}</span>{" "}
+    {getNotificationMessage(notification)}
+  </p>
+</div>
                             </p>
                             {notification.created_at && (
                               <p className="text-gray-500 text-sm mt-1">
@@ -344,8 +359,25 @@ const Notifications = () => {
                         </div>
                         <div className="flex-1">
                           <p className="text-gray-400 font-medium text-sm">
-                            <span className="text-gray-500">User {notification.sender?.substring(0, 8)}...</span>{" "}
-                            {getNotificationMessage(notification)}
+                            <div className="flex items-center gap-2">
+  {notification.senderInfo?.imageUrl ? (
+    <img
+      src={notification.senderInfo.imageUrl}
+      alt={notification.senderInfo.username}
+      className="w-8 h-8 rounded-full border border-gray-700"
+    />
+  ) : (
+    <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center text-white font-semibold">
+      {notification.senderInfo?.username?.[0]?.toUpperCase() || "?"}
+    </div>
+  )}
+  <p className="text-gray-400 font-medium text-sm">
+    <span className="text-gray-300">
+      {notification.senderInfo?.username || "Unknown User"}
+    </span>{" "}
+    {getNotificationMessage(notification)}
+  </p>
+</div>
                           </p>
                           {notification.created_at && (
                             <p className="text-gray-600 text-xs mt-1">

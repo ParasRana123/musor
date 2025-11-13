@@ -43,7 +43,9 @@ const Friends = () => {
   }, [backendapi, getToken]);
 
   // Remove a friend
-  const handleRemoveFriend = useCallback(async (friendUserId) => {
+  const handleRemoveFriend = useCallback(async (friendUserId, e) => {
+    e.stopPropagation();
+    
     if (removingFriendId) return;
     
     if (!window.confirm("Are you sure you want to remove this friend?")) {
@@ -75,6 +77,31 @@ const Friends = () => {
   useEffect(() => {
     fetchFriends();
   }, [fetchFriends]);
+
+  const getTimeAgo = (dateString) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diff = Math.floor((now - date) / 1000);
+    if(diff < 60) return "just now"
+    if(diff < 3600) {
+      const mins = Math.floor(diff / 60);
+      return `${mins} minute${mins > 1 ? "s" : ""} ago`;
+    }
+    if(diff < 86400) {
+      const hours = Math.floor(diff / 3600);
+      return `${hours} hour${hours > 1 ? "s" : ""} ago`;
+    }
+    if(diff < 2592000) {
+      const days = Math.floor(diff / 86400);
+      return `${days} day${days > 1 ? "s" : ""} ago`;
+    }
+    if(diff < 31536000) {
+      const months = Math.floor(diff / 2592000);
+      return `${months} month${months > 1 ? "s" : ""} ago`;
+    }
+    const years = Math.floor(diff / 31536000);
+    return `${years} year${years > 1 ? "s" : ""} ago`;
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-800 py-12 px-4 sm:px-6 lg:px-8">
@@ -139,9 +166,9 @@ const Friends = () => {
           </div>
         )}
 
-        {/* Friends List */}
+        {/* Friends List - Horizontal Layout */}
         {!isLoading && (
-          <div className="max-w-4xl mx-auto">
+          <div className="max-w-5xl mx-auto">
             {friends.length === 0 ? (
               <div className="bg-gradient-to-br from-gray-900/50 to-black/50 border border-gray-800 rounded-3xl p-12 text-center">
                 <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -161,57 +188,59 @@ const Friends = () => {
                 </a>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="space-y-3">
                 {friends.map((friend) => (
                   <div
                     key={friend.clerk_user_id}
                     onClick={() => navigate(`/profile/${friend.clerk_user_id}`)}
-                    className="group bg-gradient-to-br from-gray-900/50 to-black/50 border border-gray-800 rounded-xl overflow-hidden hover:border-white/50 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl"
+                    className="group cursor-pointer bg-gradient-to-br from-gray-900/50 to-black/50 border border-gray-800 rounded-xl hover:border-white/50 transition-all duration-300 hover:scale-[1.01] hover:shadow-xl"
                   >
-                    <div className="p-6">
+                    <div className="flex items-center gap-4 p-4">
                       {/* Avatar */}
-                      <div className="flex items-center justify-center mb-4">
-                        <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-2xl font-bold">
+                      <div className="flex-shrink-0">
+                        <div className="w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-xl sm:text-2xl font-bold">
                           {friend.username?.charAt(0).toUpperCase() || "?"}
                         </div>
                       </div>
 
                       {/* User Info */}
-                      <div className="text-center mb-4">
-                        <h3 className="text-white font-semibold text-lg mb-1 truncate">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-white font-semibold text-base sm:text-lg truncate">
                           {friend.username || "Unknown User"}
                         </h3>
                         {friend.email && (
-                          <div className="flex items-center justify-center gap-1 text-gray-400 text-sm">
-                            <Mail className="w-4 h-4" />
+                          <div className="flex items-center gap-1 text-gray-400 text-xs sm:text-sm mt-1">
+                            <Mail className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
                             <span className="truncate">{friend.email}</span>
                           </div>
                         )}
                         {friend.created_at && (
-                          <p className="text-gray-500 text-xs mt-2">
-                            Friends since {new Date(friend.created_at).toLocaleDateString()}
+                          <p className="text-gray-500 text-xs mt-1">
+                            Friends since {getTimeAgo(friend.created_at)}
                           </p>
                         )}
                       </div>
 
                       {/* Remove Button */}
-                      <button
-                        onClick={() => handleRemoveFriend(friend.clerk_user_id)}
-                        disabled={removingFriendId === friend.clerk_user_id}
-                        className="w-full px-4 py-2 bg-red-900/20 border border-red-800 text-red-400 rounded-lg hover:bg-red-900/30 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {removingFriendId === friend.clerk_user_id ? (
-                          <>
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                            <span>Removing...</span>
-                          </>
-                        ) : (
-                          <>
-                            <UserX className="w-4 h-4" />
-                            <span>Remove Friend</span>
-                          </>
-                        )}
-                      </button>
+                      <div className="flex-shrink-0">
+                        <button
+                          onClick={(e) => handleRemoveFriend(friend.clerk_user_id, e)}
+                          disabled={removingFriendId === friend.clerk_user_id}
+                          className="px-3 py-2 sm:px-4 sm:py-2 bg-red-900/20 border border-red-800 text-red-400 rounded-lg hover:bg-red-900/30 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                        >
+                          {removingFriendId === friend.clerk_user_id ? (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              <span className="hidden sm:inline">Removing...</span>
+                            </>
+                          ) : (
+                            <>
+                              <UserX className="w-4 h-4" />
+                              <span className="hidden sm:inline">Remove</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -237,4 +266,3 @@ const Friends = () => {
 };
 
 export default Friends;
-

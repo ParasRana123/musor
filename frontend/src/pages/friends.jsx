@@ -198,9 +198,18 @@ const Friends = () => {
                     <div className="flex items-center gap-4 p-4">
                       {/* Avatar */}
                       <div className="flex-shrink-0">
-                        <div className="w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-xl sm:text-2xl font-bold">
-                          {friend.username?.charAt(0).toUpperCase() || "?"}
-                        </div>
+                        {friend.imageUrl ? (
+  <img
+    src={friend.imageUrl}
+    alt={friend.username}
+    className="w-14 h-14 sm:w-16 sm:h-16 rounded-full border border-gray-700 object-cover"
+  />
+) : (
+  <div className="w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-xl sm:text-2xl font-bold">
+    {friend.username?.charAt(0).toUpperCase() || "?"}
+  </div>
+)}
+
                       </div>
 
                       {/* User Info */}

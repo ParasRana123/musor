@@ -1,6 +1,6 @@
 import express from "express";
 import pool from "../db/dbconnection.js";
-import { requireAuth } from "@clerk/express";
+import { requireAuth , clerkClient } from "@clerk/express";
 
 const router = express.Router();
 
@@ -99,7 +99,7 @@ router.get("/", requireAuth(), async (req, res) => {
     }
 
     // Get all friends (both directions)
-    const friends = await pool.query(
+    const friendsQuery = await pool.query(
       `SELECT u.id, u.clerk_user_id, u.username, u.email, f.created_at
        FROM friends f
        JOIN users u ON (f.friend_id = u.id AND f.user_id = $1) OR (f.user_id = u.id AND f.friend_id = $1)
@@ -107,8 +107,28 @@ router.get("/", requireAuth(), async (req, res) => {
        ORDER BY f.created_at DESC`,
       [user.rows[0].id]
     );
+    const friends = friendsQuery.rows;
+    const clerkDetails = await Promise.all(
+      friends.map(async (friend) => {
+        try {
+          const clerkUser = await clerkClient.users.getUser(friend.clerk_user_id);
+          return {
+            ...friend,
+            imageUrl: clerkUser.imageUrl || null,
+            username: 
+              clerkUser.username ||
+              `${clerkUser.firstName || ""} ${clerkUser.lastName || ""}`.trim() ||
+              friend.username || 
+              "Unkown user",
+          };
+        } catch(e) {
+            console.warn(`Failed to fetch Clerk data for ${friend.clerk_user_id}`);
+            return { ...friend, imageUrl: null };
+        }
+      })
+    );
 
-    res.status(200).json({ friends: friends.rows });
+    res.status(200).json({ friends: clerkDetails });
   } catch (error) {
     console.error("Error getting friends:", error);
     res.status(500).json({ error: "Internal server error" });

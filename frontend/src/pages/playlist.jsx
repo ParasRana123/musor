@@ -273,7 +273,7 @@ const Playlist = () => {
                             </div>
                           </div>
                           <div className="p-2 flex-1 flex items-center justify-between">
-                            <p className="text-white text-xs font-medium line-clamp-2 flex-1">
+                            <p className="text-white text-xs font-medium line-clamp-2 flex-1 mr-2">
                               {item.title}
                             </p>
                             <button
@@ -281,7 +281,7 @@ const Playlist = () => {
                                 e.stopPropagation();
                                 handleRemoveFromPlaylist(item.musicid);
                               }}
-                              className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded hover:bg-red-900/20 text-red-400 hover:text-red-300"
+                              className="flex-shrink-0 p-1.5 rounded hover:bg-red-900/20 text-red-400 hover:text-red-300 transition-all opacity-70 hover:opacity-100 lg:opacity-0 lg:group-hover:opacity-100"
                               title="Remove"
                             >
                               <Trash2 className="w-4 h-4" />
@@ -316,14 +316,6 @@ const Playlist = () => {
                   </div>
                   <div className="relative aspect-video bg-black">
                     <div id="yt-player" className="w-full h-full"></div>
-                  </div>
-                  <div className="flex justify-end p-4">
-                    <button
-                      onClick={() => handleRemoveFromPlaylist(selectedLink)}
-                      className="p-2 bg-red-900/20 hover:bg-red-900/40 text-red-400 rounded-lg transition-all"
-                    >
-                      <Trash2 className="w-5 h-5" />
-                    </button>
                   </div>
                 </div>
               </div>

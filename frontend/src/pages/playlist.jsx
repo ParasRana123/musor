@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import axios from "axios";
-import { Music, Play, Loader2, Youtube, Trash2 } from "lucide-react";
+import { Music, Play, Loader2, Youtube, Trash2, User } from "lucide-react";
 import { useAuth } from "@clerk/clerk-react";
+import { useParams } from "react-router-dom";
 
 const Playlist = () => {
   const [playlist, setPlaylist] = useState([]);
@@ -9,16 +10,18 @@ const Playlist = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [isRemoving, setIsRemoving] = useState(false);
+  const [profileUser, setProfileUser] = useState(null); // ✅ store user info (for friend's name)
   const playlistRef = useRef([]);
   const selectedLinkRef = useRef("");
+  const { id } = useParams(); // friendId (optional)
 
-  const { getToken } = useAuth();
+  const { getToken, userId } = useAuth();
   const backendapi = import.meta.env.VITE_BACKEND_URL;
   const youtubeApiKey = import.meta.env.VITE_YOUTUBE_API_KEY;
 
   const playerRef = useRef(null);
 
-  // ✅ Load YouTube Player API only once
+  // ✅ Load YouTube Player API
   useEffect(() => {
     if (!window.YT) {
       const tag = document.createElement("script");
@@ -27,7 +30,7 @@ const Playlist = () => {
     }
   }, []);
 
-  // ✅ Extract video ID from any YouTube link
+  // ✅ Extract video ID from YouTube URL
   const extractVideoId = (url) => {
     if (!url) return null;
     const patterns = [
@@ -76,13 +79,14 @@ const Playlist = () => {
 
     try {
       const token = await getToken();
-      const response = await axios.get(`${backendapi}/playlist`, {
+      const response = await axios.get(`${backendapi}/playlist${id ? `/${id}` : ""}`, {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
       });
 
+      // ✅ backend now returns { user, playlist }
       const data = response.data.playlist || [];
       const normalized = data.map((item) => ({
         ...item,
@@ -98,6 +102,7 @@ const Playlist = () => {
       }));
 
       setPlaylist(playlistWithTitles);
+      setProfileUser(response.data.user || null); // ✅ store user data
 
       if (playlistWithTitles.length > 0) {
         setSelectedLink(playlistWithTitles[0].musicid);
@@ -108,16 +113,16 @@ const Playlist = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [backendapi, getToken]);
+  }, [backendapi, getToken, id]);
 
-  // ✅ Fetch playlist on mount
   useEffect(() => {
     fetchPlaylist();
   }, [fetchPlaylist]);
 
+  // ✅ Remove song (only if it’s your own playlist)
   const handleRemoveFromPlaylist = useCallback(
     async (link) => {
-      if (isRemoving) return;
+      if (isRemoving || id) return; // prevent if viewing friend's playlist
       setIsRemoving(true);
 
       try {
@@ -153,7 +158,7 @@ const Playlist = () => {
         setIsRemoving(false);
       }
     },
-    [backendapi, getToken, playlist, isRemoving]
+    [backendapi, getToken, playlist, isRemoving, id]
   );
 
   // ✅ Keep refs updated
@@ -165,7 +170,7 @@ const Playlist = () => {
     selectedLinkRef.current = selectedLink;
   }, [selectedLink]);
 
-  // ✅ Initialize and control YouTube player
+  // ✅ YouTube Player
   useEffect(() => {
     if (!selectedLink) return;
 
@@ -202,7 +207,6 @@ const Playlist = () => {
     return () => clearInterval(checkYT);
   }, [selectedLink]);
 
-  // ✅ Cleanup on unmount
   useEffect(() => {
     return () => {
       if (playerRef.current && playerRef.current.destroy) {
@@ -211,6 +215,12 @@ const Playlist = () => {
     };
   }, []);
 
+  // ✅ Determine if it's own playlist or friend's
+  const isOwnPlaylist = !id || id === userId;
+  const displayName =
+    (profileUser?.username || profileUser?.firstName || "Music Lover") +
+    (isOwnPlaylist ? "'s Playlist" : "'s Favorites");
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-800 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto relative z-10">
@@ -218,11 +228,13 @@ const Playlist = () => {
           <div className="inline-flex items-center justify-center gap-3 mb-4">
             <Music className="w-8 h-8 text-white animate-pulse" />
             <h1 className="text-5xl md:text-6xl font-bold text-white">
-              My Playlist
+              {isOwnPlaylist ? "My Playlist" : `${profileUser?.username || profileUser?.firstName || "User"}'s Playlist`}
             </h1>
           </div>
           <p className="text-gray-400 text-lg">
-            Your favorite songs and videos
+            {isOwnPlaylist
+              ? "Your favorite songs and videos"
+              : `Enjoy ${profileUser?.username || profileUser?.firstName || "this user's"} favorite tracks`}
           </p>
         </div>
 
@@ -237,14 +249,14 @@ const Playlist = () => {
         {isLoading ? (
           <div className="text-center mt-12">
             <Loader2 className="w-10 h-10 text-white animate-spin mx-auto mb-4" />
-            <p className="text-gray-400">Loading your playlist...</p>
+            <p className="text-gray-400">Loading playlist...</p>
           </div>
         ) : (
           <div className="flex flex-col lg:flex-row gap-6">
             {/* ✅ Left Playlist Section */}
             <div className="lg:w-1/3">
               <h2 className="text-xl font-bold text-white mb-4 px-2">
-                Favorites ({playlist.length})
+                {isOwnPlaylist ? "Favorites" : `${profileUser?.username || "User"}'s Songs`} ({playlist.length})
               </h2>
 
               {playlist.length > 0 ? (
@@ -276,16 +288,19 @@ const Playlist = () => {
                             <p className="text-white text-xs font-medium line-clamp-2 flex-1 mr-2">
                               {item.title}
                             </p>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleRemoveFromPlaylist(item.musicid);
-                              }}
-                              className="flex-shrink-0 p-1.5 rounded hover:bg-red-900/20 text-red-400 hover:text-red-300 transition-all opacity-70 hover:opacity-100 lg:opacity-0 lg:group-hover:opacity-100"
-                              title="Remove"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                            {/* ✅ Show Remove only for own playlist */}
+                            {isOwnPlaylist && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRemoveFromPlaylist(item.musicid);
+                                }}
+                                className="flex-shrink-0 p-1.5 rounded hover:bg-red-900/20 text-red-400 hover:text-red-300 transition-all opacity-70 hover:opacity-100 lg:opacity-0 lg:group-hover:opacity-100"
+                                title="Remove"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -295,15 +310,16 @@ const Playlist = () => {
               ) : (
                 <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-8 text-center">
                   <Music className="w-12 h-12 text-gray-600 mx-auto mb-4" />
-                  <p className="text-gray-400">No favorites yet</p>
-                  <p className="text-gray-500 text-sm mt-2">
-                    Add songs to your playlist from the Music page.
+                  <p className="text-gray-400">
+                    {isOwnPlaylist
+                      ? "No favorites yet"
+                      : "No songs in this playlist"}
                   </p>
                 </div>
               )}
             </div>
 
-            {/* ✅ Right Video Player Section */}
+            {/* ✅ Right Video Player */}
             {selectedLink && (
               <div className="lg:w-2/3">
                 <div className="bg-gradient-to-br from-gray-900 to-black border border-gray-800 rounded-3xl overflow-hidden shadow-2xl sticky top-4">

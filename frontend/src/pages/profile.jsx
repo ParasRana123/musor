@@ -164,28 +164,37 @@ export default function Profile() {
             {/* Buttons */}
             <div className="flex flex-col sm:flex-row justify-center gap-4">
               {isOwnProfile ? (
-                <>
-                  <ActionButton
-                    onClick={() => navigate("/playlist")}
-                    label="See Playlist"
-                    icon={<Music />}
-                    color="gray"
-                  />
-                  <ActionButton
-                    onClick={() => signOut()}
-                    label="Sign Out"
-                    icon={<LogOut />}
-                    color="white"
-                  />
-                </>
-              ) : (
-                <ActionButton
-                  onClick={() => navigate("/friends")}
-                  label="Back to Friends"
-                  icon={<User />}
-                  color="gray"
-                />
-              )}
+  <>
+    <ActionButton
+      onClick={() => navigate("/playlist")}
+      label="See Playlist"
+      icon={<Music />}
+      color="gray"
+    />
+    <ActionButton
+      onClick={() => signOut()}
+      label="Sign Out"
+      icon={<LogOut />}
+      color="white"
+    />
+  </>
+) : (
+  <>
+    <ActionButton
+      onClick={() => navigate("/friends")}
+      label="Back to Friends"
+      icon={<User />}
+      color="gray"
+    />
+    <ActionButton
+      onClick={() => navigate(`/playlist/${id}`)}
+      label="View Playlist"
+      icon={<Music />}
+      color="white"
+    />
+  </>
+)}
+
             </div>
           </div>
         </div>

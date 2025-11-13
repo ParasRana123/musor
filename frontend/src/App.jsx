@@ -63,6 +63,7 @@ export default function App() {
             <Route path="/addfriend" element={<AddFriend />} />
             <Route path="/friends" element={<Friends />} />
             <Route path="/playlist" element={<Playlist />} />
+            <Route path="/playlist/:id" element={<Playlist />} />
             <Route path="/notifications" element={<Notifications />} />
             <Route path="/joinroom" element={<JoinRoom />} />
             <Route path="*" element={<NoMatch text="Oops" />} />

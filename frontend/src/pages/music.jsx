@@ -390,11 +390,11 @@ const MusicPlayer = () => {
                           <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                           <span>Playing from YouTube</span>
                         </div>
-                        
+
                         {/* Enhanced Favorite Button */}
                         <button
                           onClick={handleFav}
-                          className="group relative p-3 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all duration-300 hover:scale-110 active:scale-95"
+                          className="group relative p-3 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all duration-300 hover:scale-110 active:scale-95 z-50"
                           aria-label={isFav ? "Remove from favorites" : "Add to favorites"}
                         >
                           <Heart
@@ -405,11 +405,14 @@ const MusicPlayer = () => {
                             }`}
                           />
                           
-                          {/* Tooltip */}
-                          <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1 bg-black/90 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none">
+                          {/* Tooltip - positioned above with high z-index and strong visibility */}
+                          <span className="absolute bottom-full right-0 mb-3 px-4 py-2 bg-black border-2 border-white/30 text-white text-sm font-medium rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-200 whitespace-nowrap pointer-events-none z-[9999] shadow-2xl backdrop-blur-sm">
                             {isFav ? "Remove from favorites" : "Add to favorites"}
+                            <span className="absolute top-full right-4 -mt-px w-0 h-0 border-l-[6px] border-r-[6px] border-t-[6px] border-l-transparent border-r-transparent border-t-white/30"></span>
+                            <span className="absolute top-full right-4 -mt-0.5 w-0 h-0 border-l-[5px] border-r-[5px] border-t-[5px] border-l-transparent border-r-transparent border-t-black"></span>
                           </span>
                         </button>
+
                       </div>
                     </div>
                   </div>

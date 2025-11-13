@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import axios from "axios";
 import { Music, Play, Loader2, Youtube, Trash2 } from "lucide-react";
 import { useAuth } from "@clerk/clerk-react";
@@ -9,12 +9,25 @@ const Playlist = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [isRemoving, setIsRemoving] = useState(false);
+  const playlistRef = useRef([]);
+  const selectedLinkRef = useRef("");
 
   const { getToken } = useAuth();
   const backendapi = import.meta.env.VITE_BACKEND_URL;
-  const youtubeApiKey = import.meta.env.VITE_YOUTUBE_API_KEY; // ✅ add this in your .env
+  const youtubeApiKey = import.meta.env.VITE_YOUTUBE_API_KEY;
 
-  // ✅ Extract only the videoId from any YouTube URL
+  const playerRef = useRef(null);
+
+  // ✅ Load YouTube Player API only once
+  useEffect(() => {
+    if (!window.YT) {
+      const tag = document.createElement("script");
+      tag.src = "https://www.youtube.com/iframe_api";
+      document.body.appendChild(tag);
+    }
+  }, []);
+
+  // ✅ Extract video ID from any YouTube link
   const extractVideoId = (url) => {
     if (!url) return null;
     const patterns = [
@@ -26,13 +39,14 @@ const Playlist = () => {
       const match = url.match(pattern);
       if (match && match[1]) return match[1];
     }
-    return url; // If it's already an ID
+    return url;
   };
 
-  const getEmbedLink = (link) =>
-    `https://www.youtube.com/embed/${extractVideoId(link)}`;
+  const getThumbnail = (link) => {
+    const videoId = extractVideoId(link);
+    return `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
+  };
 
-  // ✅ Fetch actual video titles from YouTube API
   const fetchVideoTitles = async (videoIds) => {
     try {
       const response = await axios.get(
@@ -45,7 +59,6 @@ const Playlist = () => {
           },
         }
       );
-
       const titles = {};
       response.data.items.forEach((item) => {
         titles[item.id] = item.snippet.title;
@@ -57,7 +70,6 @@ const Playlist = () => {
     }
   };
 
-  // ✅ Fetch playlist + video titles
   const fetchPlaylist = useCallback(async () => {
     setIsLoading(true);
     setError("");
@@ -77,11 +89,9 @@ const Playlist = () => {
         musicid: extractVideoId(item.musicid),
       }));
 
-      // Fetch titles
       const ids = normalized.map((i) => i.musicid);
       const titles = await fetchVideoTitles(ids);
 
-      // Add titles into playlist
       const playlistWithTitles = normalized.map((item) => ({
         ...item,
         title: titles[item.musicid] || "Unknown Title",
@@ -99,6 +109,11 @@ const Playlist = () => {
       setIsLoading(false);
     }
   }, [backendapi, getToken]);
+
+  // ✅ Fetch playlist on mount
+  useEffect(() => {
+    fetchPlaylist();
+  }, [fetchPlaylist]);
 
   const handleRemoveFromPlaylist = useCallback(
     async (link) => {
@@ -138,22 +153,67 @@ const Playlist = () => {
         setIsRemoving(false);
       }
     },
-    [backendapi, getToken, playlist]
+    [backendapi, getToken, playlist, isRemoving]
   );
 
+  // ✅ Keep refs updated
   useEffect(() => {
-    fetchPlaylist();
-  }, [fetchPlaylist]);
+    playlistRef.current = playlist;
+  }, [playlist]);
 
-  const getThumbnail = (link) => {
-    const videoId = extractVideoId(link);
-    return `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
-  };
+  useEffect(() => {
+    selectedLinkRef.current = selectedLink;
+  }, [selectedLink]);
+
+  // ✅ Initialize and control YouTube player
+  useEffect(() => {
+    if (!selectedLink) return;
+
+    const checkYT = setInterval(() => {
+      if (window.YT && window.YT.Player) {
+        clearInterval(checkYT);
+
+        if (!playerRef.current) {
+          playerRef.current = new window.YT.Player("yt-player", {
+            height: "390",
+            width: "640",
+            videoId: selectedLink,
+            playerVars: { autoplay: 1, controls: 1 },
+            events: {
+              onStateChange: (event) => {
+                if (event.data === window.YT.PlayerState.ENDED) {
+                  const currentPlaylist = playlistRef.current;
+                  const currentLink = selectedLinkRef.current;
+                  const currentIndex = currentPlaylist.findIndex(
+                    (item) => item.musicid === currentLink
+                  );
+                  const next = currentPlaylist[currentIndex + 1];
+                  if (next) setSelectedLink(next.musicid);
+                }
+              },
+            },
+          });
+        } else {
+          playerRef.current.loadVideoById(selectedLink);
+        }
+      }
+    }, 300);
+
+    return () => clearInterval(checkYT);
+  }, [selectedLink]);
+
+  // ✅ Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (playerRef.current && playerRef.current.destroy) {
+        playerRef.current.destroy();
+      }
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-800 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto relative z-10">
-        {/* Header */}
         <div className="text-center mb-12">
           <div className="inline-flex items-center justify-center gap-3 mb-4">
             <Music className="w-8 h-8 text-white animate-pulse" />
@@ -181,11 +241,12 @@ const Playlist = () => {
           </div>
         ) : (
           <div className="flex flex-col lg:flex-row gap-6">
-            {/* Left Playlist */}
+            {/* ✅ Left Playlist Section */}
             <div className="lg:w-1/3">
               <h2 className="text-xl font-bold text-white mb-4 px-2">
                 Favorites ({playlist.length})
               </h2>
+
               {playlist.length > 0 ? (
                 <div className="space-y-2 max-h-[calc(100vh-250px)] overflow-y-auto pr-2 custom-scrollbar">
                   {playlist.map((item, index) => {
@@ -242,7 +303,7 @@ const Playlist = () => {
               )}
             </div>
 
-            {/* Right Player */}
+            {/* ✅ Right Video Player Section */}
             {selectedLink && (
               <div className="lg:w-2/3">
                 <div className="bg-gradient-to-br from-gray-900 to-black border border-gray-800 rounded-3xl overflow-hidden shadow-2xl sticky top-4">
@@ -254,14 +315,7 @@ const Playlist = () => {
                     <Youtube className="w-6 h-6 text-red-500" />
                   </div>
                   <div className="relative aspect-video bg-black">
-                    <iframe
-                      className="w-full h-full"
-                      src={getEmbedLink(selectedLink)}
-                      title="YouTube video player"
-                      frameBorder="0"
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowFullScreen
-                    ></iframe>
+                    <div id="yt-player" className="w-full h-full"></div>
                   </div>
                   <div className="flex justify-end p-4">
                     <button

@@ -9,6 +9,7 @@ const wss = new WebSocketServer({ port: process.env.PORT || 8080 });
 let allUsers = [];
 // Store room state: { roomId: { video: string, currentTime: number, isPlaying: boolean } }
 let roomStates = {};
+let roomQueues = {};
 
 wss.on('connection', function connection(ws) {
     console.log("User connected");
@@ -117,6 +118,26 @@ wss.on('connection', function connection(ws) {
                     } catch (e) {
                         console.error("Error sending stream to user:", e);
                     }
+                }
+            });
+        }
+
+        // added logic for adding songs to the queue
+        if(parsedMessage.type === "add_to_queue") {
+            console.log("Inside queue adding");
+            const { roomId, video } = parsedMessage;
+            if(!roomQueues[roomId]) {
+                roomQueues[roomId] = [];    
+            }
+            roomQueues[roomId].push(video);
+            console.log(`Added video to the queue: ${roomId}` , video.title);
+            allUsers.forEach((user) => {
+                if(user.rooms.includes(roomId)) {
+                    user.ws.send(JSON.stringify({
+                        type: 'queue_update',
+                        roomId,
+                        queue: roomQueues[roomId]
+                    }));
                 }
             });
         }

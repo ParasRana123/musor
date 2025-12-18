@@ -408,6 +408,7 @@ const MusicPlayer = () => {
                           {/* Tooltip - positioned above with high z-index and strong visibility */}
                           <span className="absolute bottom-full right-0 mb-3 px-4 py-2 bg-black border-2 border-white/30 text-white text-sm font-medium rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-200 whitespace-nowrap pointer-events-none z-[9999] shadow-2xl backdrop-blur-sm">
                             {isFav ? "Remove from favorites" : "Add to favorites"}
+
                             <span className="absolute top-full right-4 -mt-px w-0 h-0 border-l-[6px] border-r-[6px] border-t-[6px] border-l-transparent border-r-transparent border-t-white/30"></span>
                             <span className="absolute top-full right-4 -mt-0.5 w-0 h-0 border-l-[5px] border-r-[5px] border-t-[5px] border-l-transparent border-r-transparent border-t-black"></span>
                           </span>

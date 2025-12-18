@@ -13,6 +13,11 @@ const JoinRoom = () => {
   const [roomUsers, setRoomUsers] = useState([]);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  const [searchQuery , setSearchQuery] = useState("");
+  const [searchResults , setSearchResults] = useState("");
+  const [queue , setQueue] = useState([]);
+
   const [chatMessage , setChatMessage] = useState("");
   const [messages , setMessages] = useState([]);
   
@@ -25,6 +30,22 @@ const JoinRoom = () => {
   const chatEndRef = useRef(null);
   const { userId } = useAuth();
   const wsUrl = import.meta.env.VITE_WS_URL || "ws://localhost:8080";
+  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080"
+
+  const searchSongs = () => {
+    if(!searchQuery.trim()) return;
+    try {
+      const res = await fetch(`${API_URL}/music/get-music-link` , {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ songs: searchQuery });
+      });
+      const data = await res.json();
+      setSearchResults(data.results || []);
+    } catch {
+      setError("Failed to fetch songs");
+    }
+  }
 
   // Helper function to extract YouTube video ID from URL
   const extractVideoId = (url) => {

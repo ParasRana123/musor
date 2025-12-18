@@ -7,6 +7,7 @@ dotenv.config();
 const router = express.Router();
 
 const YT_API_KEY = process.env.YT_API_KEY;
+console.log("YT_API_KEY loaded:", process.env.YT_API_KEY?.slice(0, 10));
 
 async function getTopYTResults(songName) {
   try {

@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Users, Play, Video, Loader2, Youtube, LogOut, Send, MessageCircle } from "lucide-react";
+import { Users, Play, Video, Loader2, Youtube, LogOut, Send, MessageCircle , Search , ListMusic } from "lucide-react";
 import { useAuth } from "@clerk/clerk-react";
 
 const JoinRoom = () => {
@@ -15,7 +15,7 @@ const JoinRoom = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   const [searchQuery , setSearchQuery] = useState("");
-  const [searchResults , setSearchResults] = useState("");
+  const [searchResults , setSearchResults] = useState([]);
   const [queue , setQueue] = useState([]);
 
   const [chatMessage , setChatMessage] = useState("");
@@ -30,21 +30,34 @@ const JoinRoom = () => {
   const chatEndRef = useRef(null);
   const { userId } = useAuth();
   const wsUrl = import.meta.env.VITE_WS_URL || "ws://localhost:8080";
-  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080"
+  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000"
 
-  const searchSongs = () => {
+  const searchSongs = async () => {
     if(!searchQuery.trim()) return;
     try {
-      const res = await fetch(`${API_URL}/music/get-music-link` , {
+      const res = await fetch(`${API_URL}/getsongs/get-music-link` , {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ songs: searchQuery });
+        body: JSON.stringify({ song: searchQuery })
       });
       const data = await res.json();
       setSearchResults(data.results || []);
     } catch {
       setError("Failed to fetch songs");
     }
+  }
+
+  const addToQueue = (video) => {
+    if(!wsRef.current) return;
+    wsRef.current.send(JSON.stringify({
+      type: "add_to_queue",
+      roomId,
+      video: {
+        videoId: video.videoId,
+        title: video.title,
+        url: video.embedLink
+      }
+    }))
   }
 
   // Helper function to extract YouTube video ID from URL
@@ -708,6 +721,51 @@ const JoinRoom = () => {
             )}
           </div>
         </div>
+
+        <div className="flex gap-2">
+              <input
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder="Search songs..."
+                className="flex-1 bg-black border border-gray-700 rounded-lg px-3 py-2"
+              />
+              <button
+                onClick={searchSongs}
+                className="bg-blue-600 px-4 rounded-lg"
+              >
+                <Search />
+              </button>
+            </div>
+
+              <div className="mt-4 space-y-2 max-h-60 overflow-y-auto">
+              {searchResults.map(v => (
+                <div
+                  key={v.videoId}
+                  className="flex items-center gap-3 p-2 bg-black rounded-lg cursor-pointer hover:bg-gray-800"
+                  onClick={() => addToQueue(v)}
+                >
+                  <img src={v.thumbnail} className="w-16 rounded" />
+                  <p className="text-sm line-clamp-2">{v.title}</p>
+                </div>
+              ))}
+            </div>
+
+                      <div className="bg-gray-900 rounded-2xl p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <ListMusic />
+              <h3 className="font-semibold">Up Next</h3>
+            </div>
+
+            {queue.length === 0 ? (
+              <p className="text-gray-500 text-sm">Queue is empty</p>
+            ) : (
+              queue.map((v, i) => (
+                <div key={i} className="text-sm py-1 border-b border-gray-800">
+                  {i + 1}. {v.title}
+                </div>
+              ))
+            )}
+          </div>
 
         {/* Video Stream Section */}
         {isConnected && (

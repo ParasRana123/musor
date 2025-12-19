@@ -169,6 +169,12 @@ const JoinRoom = () => {
               isOwn: message.senderId === userId
             }]);
           }
+
+          if(message.type === "queue_update") {
+            if(message.roomId === roomId) {
+              setQueue(message.queue);
+            }
+          }
           
           if (message.type === "stream") {
             // Received video stream from another user - ALL users should play the same video

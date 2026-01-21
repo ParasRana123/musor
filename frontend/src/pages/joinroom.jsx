@@ -562,6 +562,13 @@ const JoinRoom = () => {
                   }));
                   console.log("Broadcasting pause at:", currentTime);
                 }
+              } else if(event.data === window.YT.PlayerState.ENDED) {
+                if(wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+                  wsRef.current.send(JSON.stringify({
+                    type: "video_ended",
+                    roomId
+                  }));
+                }
               }
             } catch (e) {
               console.error("Error in onStateChange:", e);

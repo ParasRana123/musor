@@ -11,6 +11,42 @@ let allUsers = [];
 let roomStates = {};
 let roomQueues = {};
 
+function playNextFromQueue(roomId) {
+    if(!roomQueues[roomId] || roomQueues[roomId].length == 0) {
+        console.log("Room Queue empty: " , roomId);
+        roomStates[roomId] = null;
+        return;
+    }
+    const nextVideo = roomQueues[roomId].shift();
+    roomStates[roomId] = {
+        video: nextVideo.url,
+        currentTime: 0,
+        isPlaying: true
+    };
+    console.log("Playing from Queue: " , nextVideo.title);
+    allUsers.forEach(user=> {
+        if(user.rooms.includes(roomId)) {
+            user.ws.send(JSON.stringify({
+                type: "stream",
+                roomId,
+                video: nextVideo.url,
+                videoId: nextVideo.videoId,
+                currentTime: 0,
+                isPlaying: true
+            }));
+        }
+    });
+    allUsers.forEach(user=>{
+        if(user.rooms.includes(roomId)) {
+            user.ws.send(JSON.stringify({
+                type: "queue_update",
+                roomId,
+                queue: roomQueues[roomId]
+            }));
+        }
+    });
+}
+
 wss.on('connection', function connection(ws) {
     console.log("User connected");
 
@@ -140,6 +176,15 @@ wss.on('connection', function connection(ws) {
                     }));
                 }
             });
+            if(!roomStates[roomId]) {
+                playNextFromQueue(roomId);
+            }
+        }
+
+        if(parsedMessage.type == "video_ended") {
+            const { roomId } = parsedMessage;
+            console.log("Video ended: " , roomId);
+            playNextFromQueue(roomId);
         }
 
         if(parsedMessage.type === "play") {

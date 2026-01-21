@@ -48,7 +48,10 @@ const JoinRoom = () => {
   }
 
   const addToQueue = (video) => {
-    if(!wsRef.current) return;
+    if(!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+      console.log("WebSocket not connected");
+      return;
+    }
     wsRef.current.send(JSON.stringify({
       type: "add_to_queue",
       roomId,
@@ -58,6 +61,7 @@ const JoinRoom = () => {
         url: video.embedLink
       }
     }))
+    console.log("Added to the queue: " , video.title);
   }
 
   // Helper function to extract YouTube video ID from URL
@@ -748,10 +752,12 @@ const JoinRoom = () => {
                 <div
                   key={v.videoId}
                   className="flex items-center gap-3 p-2 bg-black rounded-lg cursor-pointer hover:bg-gray-800"
-                  onClick={() => addToQueue(v)}
                 >
                   <img src={v.thumbnail} className="w-16 rounded" />
                   <p className="text-sm line-clamp-2">{v.title}</p>
+                  <button onClick={() => addToQueue(v)} className="px-3 py-1 text-xs bg-green-600 rounded-md hover:bg-green-500">
+                    Add
+                  </button>
                 </div>
               ))}
             </div>

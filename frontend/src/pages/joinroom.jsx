@@ -195,7 +195,8 @@ const addToQueue = (video) => {
 
           if(message.type === "queue_update") {
             if(message.roomId === roomId) {
-              setQueue(message.queue);
+              setQueue(message.queue); 
+              console.log(message)
             }
           }
           

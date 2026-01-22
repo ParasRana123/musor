@@ -172,9 +172,11 @@ const addToQueue = (video) => {
       };
 
       ws.onmessage = (event) => {
-        try {
+        try { 
+          console.log("in the messageing queue")
           // Check if message is a string (like "connected")
           if (typeof event.data === 'string' && !event.data.startsWith('{')) {
+            console.log("in the err")
             // Handle non-JSON messages (like connection confirmation)
             if (event.data === 'connected') {
               console.log("WebSocket connection confirmed");
@@ -183,7 +185,7 @@ const addToQueue = (video) => {
           }
 
           const message = JSON.parse(event.data);
-
+          console.log("message done",message)
           if(message.type === "chat") {
             setMessages(prev => [...prev , {
               text: message.chat,

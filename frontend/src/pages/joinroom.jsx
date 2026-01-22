@@ -47,24 +47,46 @@ const JoinRoom = () => {
     }
   }
 
-  const addToQueue = (video) => {
-    if(!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
-      console.log("WebSocket not connected");
-      return;
-    }
-    wsRef.current.send(JSON.stringify({
-      type: "add_to_queue",
-      roomId,
-      video: {
-        videoId: video.videoId,
-        title: video.title,
-        url: video.embedLink
-      }
-    }))
-    console.log("Added to the queue: " , video.title);
-    setSearchResults([]);
-    setSearchQuery("");J
+const addToQueue = (video) => {
+  if (!wsRef.current) {
+    console.error("WebSocket instance missing");
+
+    alert("⚠️ Connection not ready. Please refresh the page.");
+    return;
   }
+
+  if (wsRef.current.readyState !== WebSocket.OPEN) {
+    console.error("WebSocket not open:", wsRef.current.readyState);
+
+    let msg = "⚠️ Server connection lost. Reconnecting...";
+    // setErrorMessage?.(msg); 
+    alert(msg);
+
+    return;
+  }
+
+  try {
+    wsRef.current.send(
+      JSON.stringify({
+        type: "add_to_queue",
+        roomId,
+        video: {
+          videoId: video.videoId,
+          title: video.title,
+          url: video.embedLink,
+        },
+      })
+    );
+
+    console.log("Added to queue:", video.title);
+
+    setSearchResults([]);
+    setSearchQuery("");
+  } catch (err) {
+    console.error("Failed to send add_to_queue:", err);
+    alert("❌ Failed to add song to queue. Try again.");
+  }
+};
 
   // Helper function to extract YouTube video ID from URL
   const extractVideoId = (url) => {

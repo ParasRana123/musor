@@ -57,14 +57,11 @@ const addToQueue = (video) => {
 
   if (wsRef.current.readyState !== WebSocket.OPEN) {
     console.error("WebSocket not open:", wsRef.current.readyState);
-
     let msg = "⚠️ Server connection lost. Reconnecting...";
     // setErrorMessage?.(msg); 
     alert(msg);
-
     return;
   }
-
   try {
     wsRef.current.send(
       JSON.stringify({
@@ -77,14 +74,12 @@ const addToQueue = (video) => {
         },
       })
     );
-
     console.log("Added to queue:", video.title);
-
     setSearchResults([]);
     setSearchQuery("");
   } catch (err) {
     console.error("Failed to send add_to_queue:", err);
-    alert("❌ Failed to add song to queue. Try again.");
+    setError("❌ Failed to add song to queue. Try again.");
   }
 };
 

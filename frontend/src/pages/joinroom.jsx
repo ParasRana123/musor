@@ -197,7 +197,7 @@ const addToQueue = (video) => {
 
           if(message.type === "queue_update") {
             if(message.roomId === roomId) {
-              setQueue(message.queue); 
+              setQueue([...message.queue]);
               console.log(message)
             }
           }
@@ -791,7 +791,7 @@ const addToQueue = (video) => {
               ))}
             </div>
 
-                      <div className="bg-gray-900 rounded-2xl p-4">
+           <div className="bg-gray-900 rounded-2xl p-4">
             <div className="flex items-center gap-2 mb-3">
               <ListMusic />
               <h3 className="font-semibold">Up Next</h3>

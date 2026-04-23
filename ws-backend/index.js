@@ -25,7 +25,7 @@ function playNextFromQueue(roomId) {
     };
     console.log("Playing from Queue: " , nextVideo.title);
     allUsers.forEach(user=> {
-        if(user.rooms.includes(roomId)) {
+        if(user.rooms && user.rooms.includes(roomId)) {
             user.ws.send(JSON.stringify({
                 type: "stream",
                 roomId,
@@ -36,14 +36,31 @@ function playNextFromQueue(roomId) {
             }));
         }
     });
-    allUsers.forEach(user=>{
-        if(user.rooms.includes(roomId)) {
-            user.ws.send(JSON.stringify({
-                type: "queue_update",
-                roomId,
-                queue: roomQueues[roomId]
-            }));
+    // allUsers.forEach(user=>{
+    //     if(user.rooms.includes(roomId)) {
+    //         user.ws.send(JSON.stringify({
+    //             type: "queue_update",
+    //             roomId,
+    //             queue: roomQueues[roomId]
+    //         }));
+    //     }
+    // });
+    allUsers = allUsers.filter(user => {
+        try {
+            if(user.ws.readyState == 1) {
+                if(user.rooms && user.rooms.includes(roomId)) {
+                    user.ws.send(JSON.stringify({
+                        type: "queue_update",
+                        roomId,
+                        queue: roomQueues[roomId]
+                    }));
+                }
+                return true;    
+            }
+        } catch(e) {
+            console.log("Removing dead socket");
         }
+        return false;
     });
 }
 
@@ -168,7 +185,7 @@ wss.on('connection', function connection(ws) {
             roomQueues[roomId].push(video);
             console.log(`Added video to the queue: ${roomId}` , video.title);
             allUsers.forEach((user) => {
-                if(user.rooms.includes(roomId)) {
+                if(user.rooms && user.rooms.includes(roomId)) {
                     user.ws.send(JSON.stringify({
                         type: 'queue_update',
                         roomId,

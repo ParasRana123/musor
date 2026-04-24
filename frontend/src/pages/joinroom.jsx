@@ -50,7 +50,6 @@ const JoinRoom = () => {
 const addToQueue = (video) => {
   if (!wsRef.current) {
     console.error("WebSocket instance missing");
-
     alert("⚠️ Connection not ready. Please refresh the page.");
     return;
   }
@@ -147,6 +146,7 @@ const addToQueue = (video) => {
     }
 
     if (wsRef.current?.readyState === WebSocket.OPEN) {
+      console.log("WebSocket already connected");
       return; // Already connected
     }
 

@@ -30,19 +30,24 @@ const JoinRoom = () => {
   const chatEndRef = useRef(null);
   const { userId } = useAuth();
   const wsUrl = import.meta.env.VITE_WS_URL || "ws://localhost:8080";
-  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000"
+  const API_URL = import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_URL || "http://localhost:5000";
 
   const searchSongs = async () => {
     if(!searchQuery.trim()) return;
     try {
+      setError("");
       const res = await fetch(`${API_URL}/getsongs/get-music-link` , {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ song: searchQuery })
       });
+      if (!res.ok) {
+        throw new Error(`Failed to fetch songs: ${res.statusText}`);
+      }
       const data = await res.json();
       setSearchResults(data.results || []);
-    } catch {
+    } catch (err) {
+      console.error("Error searching songs:", err);
       setError("Failed to fetch songs");
     }
   }
@@ -765,12 +770,13 @@ const addToQueue = (video) => {
               <input
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && searchSongs()}
                 placeholder="Search songs..."
-                className="flex-1 bg-black border border-gray-700 rounded-lg px-3 py-2"
+                className="flex-1 bg-black text-white border border-gray-700 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
               />
               <button
                 onClick={searchSongs}
-                className="bg-blue-600 px-4 rounded-lg"
+                className="bg-blue-600 px-4 rounded-lg text-white hover:bg-blue-500 transition-colors"
               >
                 <Search />
               </button>

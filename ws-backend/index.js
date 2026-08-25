@@ -1,6 +1,5 @@
 import { WebSocketServer } from "ws";
 import findUser from "./utils/findUsers.js";
-import streamVideo from "./utils/streamVideo.js";
 import dotenv from "dotenv";
 dotenv.config();
 
@@ -12,8 +11,8 @@ let roomStates = {};
 let roomQueues = {};
 
 function playNextFromQueue(roomId) {
-    if(!roomQueues[roomId] || roomQueues[roomId].length == 0) {
-        console.log("Room Queue empty: " , roomId);
+    if (!roomQueues[roomId] || roomQueues[roomId].length === 0) {
+        console.log("Room Queue empty:", roomId);
         roomStates[roomId] = null;
         return;
     }
@@ -23,41 +22,40 @@ function playNextFromQueue(roomId) {
         currentTime: 0,
         isPlaying: true
     };
-    console.log("Playing from Queue: " , nextVideo.title);
-    allUsers.forEach(user=> {
-        if(user.rooms && user.rooms.includes(roomId)) {
-            user.ws.send(JSON.stringify({
-                type: "stream",
-                roomId,
-                video: nextVideo.url,
-                videoId: nextVideo.videoId,
-                currentTime: 0,
-                isPlaying: true
-            }));
+    console.log("Playing from Queue:", nextVideo.title);
+
+    allUsers.forEach((user) => {
+        if (user.rooms && user.rooms.includes(roomId)) {
+            try {
+                if (user.ws.readyState === 1) {
+                    user.ws.send(JSON.stringify({
+                        type: "stream",
+                        roomId,
+                        video: nextVideo.url,
+                        videoId: nextVideo.videoId,
+                        currentTime: 0,
+                        isPlaying: true
+                    }));
+                }
+            } catch (e) {
+                console.error("Error sending stream to user:", e);
+            }
         }
     });
-    // allUsers.forEach(user=>{
-    //     if(user.rooms.includes(roomId)) {
-    //         user.ws.send(JSON.stringify({
-    //             type: "queue_update",
-    //             roomId,
-    //             queue: roomQueues[roomId]
-    //         }));
-    //     }
-    // });
-    allUsers = allUsers.filter(user => {
+
+    allUsers = allUsers.filter((user) => {
         try {
-            if(user.ws.readyState == 1) {
-                if(user.rooms && user.rooms.includes(roomId)) {
+            if (user.ws.readyState === 1) {
+                if (user.rooms && user.rooms.includes(roomId)) {
                     user.ws.send(JSON.stringify({
                         type: "queue_update",
                         roomId,
                         queue: roomQueues[roomId]
                     }));
                 }
-                return true;    
+                return true;
             }
-        } catch(e) {
+        } catch (e) {
             console.log("Removing dead socket");
         }
         return false;
@@ -67,292 +65,324 @@ function playNextFromQueue(roomId) {
 wss.on('connection', function connection(ws) {
     console.log("User connected");
 
-    ws.on("message" , async (msg) => {
-        const user = findUser(allUsers , ws);
-        console.log("msg recieved" , msg.toString());
-        const parsedMessage = JSON.parse(msg);
-        
-        if(parsedMessage.type === "join_room") {
-            const existingUser = findUser(allUsers, ws);
-            const roomId = parsedMessage.payload.roomId;
-            
-            if (existingUser) {
-                // User already exists, add room
-                if (!existingUser.rooms.includes(roomId)) {
-                    existingUser.rooms.push(roomId);
-                }
-            } else {
-                // New user
-                allUsers.push({
-                    ws: ws,
-                    userId: parsedMessage.payload.userId,
-                    rooms: [roomId]
-                });
+    ws.on('error', (err) => {
+        console.error("WebSocket client error:", err.message);
+    });
+
+    ws.on("message", async (msg) => {
+        try {
+            const rawMsg = msg.toString();
+            if (!rawMsg || !rawMsg.trim().startsWith('{')) {
+                return;
             }
-            
-            // Send current room state to newly joined user
-            if (roomStates[roomId]) {
-                const video = roomStates[roomId].video;
-                // Extract video ID
+            const parsedMessage = JSON.parse(rawMsg);
+            console.log("Message received:", parsedMessage.type);
+
+            if (parsedMessage.type === "join_room") {
+                const roomId = parsedMessage.payload?.roomId;
+                const userId = parsedMessage.payload?.userId;
+                if (!roomId) return;
+
+                const existingUser = findUser(allUsers, ws);
+                if (existingUser) {
+                    if (userId) existingUser.userId = userId;
+                    if (!existingUser.rooms.includes(roomId)) {
+                        existingUser.rooms.push(roomId);
+                    }
+                } else {
+                    allUsers.push({
+                        ws: ws,
+                        userId: userId,
+                        rooms: [roomId]
+                    });
+                }
+
+                // Send current room state to newly joined user
+                if (roomStates[roomId]) {
+                    const video = roomStates[roomId].video;
+                    let videoId = video;
+                    const videoIdMatch = video.match(/(?:youtube\.com\/embed\/|youtu\.be\/|youtube\.com\/watch\?v=)([^&\n?#]+)/);
+                    if (videoIdMatch && videoIdMatch[1]) {
+                        videoId = videoIdMatch[1];
+                    }
+
+                    console.log(`Sending sync to new user in room ${roomId}: video ${videoId}`);
+
+                    try {
+                        if (ws.readyState === 1) {
+                            ws.send(JSON.stringify({
+                                type: "sync",
+                                roomId: roomId,
+                                video: video,
+                                videoId: videoId,
+                                currentTime: roomStates[roomId].currentTime || 0,
+                                isPlaying: roomStates[roomId].isPlaying || false
+                            }));
+                        }
+                    } catch (err) {
+                        console.error("Error sending sync to user:", err);
+                    }
+                }
+
+                // Send current queue to newly joined user
+                if (roomQueues[roomId] && roomQueues[roomId].length > 0) {
+                    try {
+                        if (ws.readyState === 1) {
+                            ws.send(JSON.stringify({
+                                type: "queue_update",
+                                roomId: roomId,
+                                queue: roomQueues[roomId]
+                            }));
+                        }
+                    } catch (err) {
+                        console.error("Error sending queue to user:", err);
+                    }
+                }
+
+                console.log(`User ${userId} joined room ${roomId}`);
+            }
+
+            if (parsedMessage.type === "stream") {
+                const video = parsedMessage.video;
+                const roomId = parsedMessage.roomId;
+                const currentTime = parsedMessage.currentTime || 0;
+                const currentUser = findUser(allUsers, ws);
+
+                if (!currentUser || !currentUser.userId) {
+                    console.log('User not found or no userId');
+                    return null;
+                }
+
+                roomStates[roomId] = {
+                    video: video,
+                    currentTime: currentTime,
+                    isPlaying: true
+                };
+
                 let videoId = video;
                 const videoIdMatch = video.match(/(?:youtube\.com\/embed\/|youtu\.be\/|youtube\.com\/watch\?v=)([^&\n?#]+)/);
                 if (videoIdMatch && videoIdMatch[1]) {
                     videoId = videoIdMatch[1];
                 }
-                
-                console.log(`Sending sync to new user in room ${roomId}: video ${videoId}`);
-                
-                ws.send(JSON.stringify({
-                    type: "sync",
-                    roomId: roomId,
-                    video: video,
-                    videoId: videoId,
-                    currentTime: roomStates[roomId].currentTime || 0,
-                    isPlaying: roomStates[roomId].isPlaying || false
-                }));
-            }
-            
-            console.log(`User ${parsedMessage.payload.userId} joined room ${roomId}`);
-        }
 
-        if(parsedMessage.type === "stream") {
-            const video = parsedMessage.video;
-            const roomId = parsedMessage.roomId;
-            const currentTime = parsedMessage.currentTime || 0;
-            const currentUser = findUser(allUsers, ws);
-            
-            console.log("User Id" , currentUser?.userId);
-            console.log("video" , video);
-            console.log("room" , roomId);
-            
-            if(!currentUser || !currentUser.userId) {
-                console.log('User not found or no userId');
-                return null;
-            }
-            
-            // Update room state
-            roomStates[roomId] = {
-                video: video,
-                currentTime: currentTime,
-                isPlaying: true
-            };
-            
-            // Save video to database (optional)
-            // try {
-            //     await streamVideo(video, roomId, currentUser.userId);
-            // } catch (error) {
-            //     console.error("Error saving video:", error);
-            // }
-            
-            // Extract video ID from embed URL for better compatibility
-            let videoId = video;
-            // If it's an embed URL, extract the video ID
-            const videoIdMatch = video.match(/(?:youtube\.com\/embed\/|youtu\.be\/|youtube\.com\/watch\?v=)([^&\n?#]+)/);
-            if (videoIdMatch && videoIdMatch[1]) {
-                videoId = videoIdMatch[1];
-            }
-            
-            console.log(`Broadcasting video ${videoId} to room ${roomId} at time ${currentTime}`);
-            
-            // Broadcast to all users in the room (including sender so they all see the same video)
-            allUsers.forEach((user) => {
-                if(user.rooms && user.rooms.includes(roomId)) {
-                    try {
-                        user.ws.send(
-                            JSON.stringify({
-                                type: "stream",
-                                video: video, // Send full URL
-                                videoId: videoId, // Also send extracted ID
-                                roomId,
-                                currentTime: currentTime,
-                                isPlaying: true
-                            })
-                        );
-                    } catch (e) {
-                        console.error("Error sending stream to user:", e);
+                console.log(`Broadcasting video ${videoId} to room ${roomId} at time ${currentTime}`);
+
+                allUsers.forEach((user) => {
+                    if (user.rooms && user.rooms.includes(roomId)) {
+                        try {
+                            if (user.ws.readyState === 1) {
+                                user.ws.send(
+                                    JSON.stringify({
+                                        type: "stream",
+                                        video: video,
+                                        videoId: videoId,
+                                        roomId,
+                                        currentTime: currentTime,
+                                        isPlaying: true
+                                    })
+                                );
+                            }
+                        } catch (e) {
+                            console.error("Error sending stream to user:", e);
+                        }
                     }
-                }
-            });
-        }
-
-        // added logic for adding songs to the queue
-        if(parsedMessage.type === "add_to_queue") {
-            console.log("Inside queue adding");
-            const { roomId, video } = parsedMessage;
-            if(!roomQueues[roomId]) {
-                roomQueues[roomId] = [];    
+                });
             }
-            roomQueues[roomId].push(video);
-            console.log(`Added video to the queue: ${roomId}` , video.title);
-            allUsers.forEach((user) => {
-                if(user.rooms && user.rooms.includes(roomId)) {
-                    user.ws.send(JSON.stringify({
-                        type: 'queue_update',
-                        roomId,
-                        queue: roomQueues[roomId]
-                    }));
+
+            if (parsedMessage.type === "add_to_queue") {
+                console.log("Inside queue adding");
+                const { roomId, video } = parsedMessage;
+                if (!roomQueues[roomId]) {
+                    roomQueues[roomId] = [];
                 }
-            });
-            if(!roomStates[roomId]) {
+                roomQueues[roomId].push(video);
+                console.log(`Added video to the queue: ${roomId}`, video.title);
+
+                allUsers.forEach((user) => {
+                    if (user.rooms && user.rooms.includes(roomId)) {
+                        try {
+                            if (user.ws.readyState === 1) {
+                                user.ws.send(JSON.stringify({
+                                    type: 'queue_update',
+                                    roomId,
+                                    queue: roomQueues[roomId]
+                                }));
+                            }
+                        } catch (e) {
+                            console.error("Error sending queue update:", e);
+                        }
+                    }
+                });
+
+                if (!roomStates[roomId]) {
+                    playNextFromQueue(roomId);
+                }
+            }
+
+            if (parsedMessage.type === "video_ended") {
+                const { roomId } = parsedMessage;
+                console.log("Video ended:", roomId);
                 playNextFromQueue(roomId);
             }
-        }
 
-        if(parsedMessage.type == "video_ended") {
-            const { roomId } = parsedMessage;
-            console.log("Video ended: " , roomId);
-            playNextFromQueue(roomId);
-        }
+            if (parsedMessage.type === "play") {
+                const roomId = parsedMessage.roomId;
+                const currentTime = parsedMessage.currentTime || 0;
 
-        if(parsedMessage.type === "play") {
-            const roomId = parsedMessage.roomId;
-            const currentTime = parsedMessage.currentTime || 0;
-            
-            // Update room state
-            if (roomStates[roomId]) {
-                roomStates[roomId].isPlaying = true;
-                roomStates[roomId].currentTime = currentTime;
-            }
-            
-            console.log(`Broadcasting play to room ${roomId} at time ${currentTime}`);
-            
-            // Broadcast play event to ALL users in the room (except sender)
-            const currentUser = findUser(allUsers, ws);
-            allUsers.forEach((user) => {
-                if(user.rooms && user.rooms.includes(roomId) && user.ws !== ws) {
-                    try {
-                        user.ws.send(
-                            JSON.stringify({
-                                type: "play",
-                                roomId,
-                                currentTime: currentTime
-                            })
-                        );
-                    } catch (e) {
-                        console.error("Error sending play to user:", e);
+                if (roomStates[roomId]) {
+                    roomStates[roomId].isPlaying = true;
+                    roomStates[roomId].currentTime = currentTime;
+                }
+
+                console.log(`Broadcasting play to room ${roomId} at time ${currentTime}`);
+
+                allUsers.forEach((user) => {
+                    if (user.rooms && user.rooms.includes(roomId) && user.ws !== ws) {
+                        try {
+                            if (user.ws.readyState === 1) {
+                                user.ws.send(
+                                    JSON.stringify({
+                                        type: "play",
+                                        roomId,
+                                        currentTime: currentTime
+                                    })
+                                );
+                            }
+                        } catch (e) {
+                            console.error("Error sending play to user:", e);
+                        }
                     }
-                }
-            });
-        }
-
-        if(parsedMessage.type === "pause") {
-            const roomId = parsedMessage.roomId;
-            const currentTime = parsedMessage.currentTime || 0;
-            
-            // Update room state
-            if (roomStates[roomId]) {
-                roomStates[roomId].isPlaying = false;
-                roomStates[roomId].currentTime = currentTime;
+                });
             }
-            
-            console.log(`Broadcasting pause to room ${roomId} at time ${currentTime}`);
-            
-            // Broadcast pause event to ALL users in the room (except sender)
-            // This is critical - when one pauses, ALL must pause
-            const currentUser = findUser(allUsers, ws);
-            allUsers.forEach((user) => {
-                if(user.rooms && user.rooms.includes(roomId) && user.ws !== ws) {
-                    try {
-                        user.ws.send(
-                            JSON.stringify({
-                                type: "pause",
-                                roomId,
-                                currentTime: currentTime
-                            })
-                        );
-                    } catch (e) {
-                        console.error("Error sending pause to user:", e);
+
+            if (parsedMessage.type === "pause") {
+                const roomId = parsedMessage.roomId;
+                const currentTime = parsedMessage.currentTime || 0;
+
+                if (roomStates[roomId]) {
+                    roomStates[roomId].isPlaying = false;
+                    roomStates[roomId].currentTime = currentTime;
+                }
+
+                console.log(`Broadcasting pause to room ${roomId} at time ${currentTime}`);
+
+                allUsers.forEach((user) => {
+                    if (user.rooms && user.rooms.includes(roomId) && user.ws !== ws) {
+                        try {
+                            if (user.ws.readyState === 1) {
+                                user.ws.send(
+                                    JSON.stringify({
+                                        type: "pause",
+                                        roomId,
+                                        currentTime: currentTime
+                                    })
+                                );
+                            }
+                        } catch (e) {
+                            console.error("Error sending pause to user:", e);
+                        }
                     }
-                }
-            });
-        }
-
-        if(parsedMessage.type === "seek") {
-            const roomId = parsedMessage.roomId;
-            const currentTime = parsedMessage.currentTime || 0;
-            
-            // Update room state
-            if (roomStates[roomId]) {
-                roomStates[roomId].currentTime = currentTime;
+                });
             }
-            
-            // Broadcast seek event to all users in the room
-            allUsers.forEach((user) => {
-                if(user.rooms && user.rooms.includes(roomId)) {
-                    user.ws.send(
-                        JSON.stringify({
-                            type: "seek",
-                            roomId,
-                            currentTime: currentTime
-                        })
-                    );
-                }
-            });
-        }
 
-        if(parsedMessage.type === "time_sync") {
-            const roomId = parsedMessage.roomId;
-            const currentTime = parsedMessage.currentTime || 0;
-            
-            // Update room state with latest time
-            if (roomStates[roomId]) {
-                roomStates[roomId].currentTime = currentTime;
-            }
-            
-            // Broadcast time sync to all other users in the room (except sender)
-            // This keeps all videos aligned
-            allUsers.forEach((user) => {
-                if(user.rooms && user.rooms.includes(roomId) && user.ws !== ws) {
-                    try {
-                        user.ws.send(
-                            JSON.stringify({
-                                type: "time_sync",
-                                roomId,
-                                currentTime: currentTime
-                            })
-                        );
-                    } catch (e) {
-                        console.error("Error sending time sync:", e);
+            if (parsedMessage.type === "seek") {
+                const roomId = parsedMessage.roomId;
+                const currentTime = parsedMessage.currentTime || 0;
+
+                if (roomStates[roomId]) {
+                    roomStates[roomId].currentTime = currentTime;
+                }
+
+                allUsers.forEach((user) => {
+                    if (user.rooms && user.rooms.includes(roomId)) {
+                        try {
+                            if (user.ws.readyState === 1) {
+                                user.ws.send(
+                                    JSON.stringify({
+                                        type: "seek",
+                                        roomId,
+                                        currentTime: currentTime
+                                    })
+                                );
+                            }
+                        } catch (e) {
+                            console.error("Error sending seek to user:", e);
+                        }
                     }
-                }
-            });
-        }
-
-        if(parsedMessage.type === "chat") {
-            const chat = parsedMessage.chat;
-            const roomId = parsedMessage.roomId;
-            const currentUser = findUser(allUsers , ws);
-            console.log("Chat: " , chat);
-            console.log("Room ID: " , roomId);
-            console.log("Chat: " , chat);
-            if(!currentUser || !currentUser.userId) {
-                console.log("User not found");
-                return null;
+                });
             }
-            allUsers.forEach((user) => {
-                if(user.rooms && user.rooms.includes(roomId)) {
-                    try {
-                        user.ws.send(
-                            JSON.stringify({
-                                type: "chat",
-                                chat: chat,
-                                roomId,
-                                senderId: currentUser.userId
-                            })
-                        );
-                    } catch(e) {
-                        console.log("Erro sending chat to the user: " , e);
-                    }
+
+            if (parsedMessage.type === "time_sync") {
+                const roomId = parsedMessage.roomId;
+                const currentTime = parsedMessage.currentTime || 0;
+
+                if (roomStates[roomId]) {
+                    roomStates[roomId].currentTime = currentTime;
                 }
-            });
+
+                allUsers.forEach((user) => {
+                    if (user.rooms && user.rooms.includes(roomId) && user.ws !== ws) {
+                        try {
+                            if (user.ws.readyState === 1) {
+                                user.ws.send(
+                                    JSON.stringify({
+                                        type: "time_sync",
+                                        roomId,
+                                        currentTime: currentTime
+                                    })
+                                );
+                            }
+                        } catch (e) {
+                            console.error("Error sending time sync:", e);
+                        }
+                    }
+                });
+            }
+
+            if (parsedMessage.type === "chat") {
+                const chat = parsedMessage.chat;
+                const roomId = parsedMessage.roomId;
+                const currentUser = findUser(allUsers, ws);
+
+                if (!currentUser || !currentUser.userId) {
+                    console.log("User not found");
+                    return null;
+                }
+
+                allUsers.forEach((user) => {
+                    if (user.rooms && user.rooms.includes(roomId)) {
+                        try {
+                            if (user.ws.readyState === 1) {
+                                user.ws.send(
+                                    JSON.stringify({
+                                        type: "chat",
+                                        chat: chat,
+                                        roomId,
+                                        senderId: currentUser.userId
+                                    })
+                                );
+                            }
+                        } catch (e) {
+                            console.error("Error sending chat to user:", e);
+                        }
+                    }
+                });
+            }
+        } catch (error) {
+            console.error("Error handling message:", error);
         }
     });
 
     ws.on('close', () => {
-        // Remove user when they disconnect
-        allUsers = allUsers.filter(user => user.ws !== ws);
+        allUsers = allUsers.filter((user) => user.ws !== ws);
         console.log("User disconnected");
     });
 
-    ws.send('connected');
+    try {
+        if (ws.readyState === 1) {
+            ws.send('connected');
+        }
+    } catch (err) {
+        console.error("Error sending initial connected message:", err);
+    }
 });

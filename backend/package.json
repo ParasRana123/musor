@@ -1,5 +1,9 @@
 {
   "type": "module",
+  "scripts": {
+    "dev": "nodemon api/app.js",
+    "start": "node api/app.js"
+  },
   "dependencies": {
     "@clerk/clerk-sdk-node": "^5.1.6",
     "@clerk/express": "^1.7.43",
